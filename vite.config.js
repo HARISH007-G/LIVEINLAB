@@ -12,10 +12,10 @@ try {
 }
 
 export default defineConfig({
-  // Use environment-aware base URL
-  // Development: '/' for localhost
-  // Production: '/LIVEINLAB/' for GitHub Pages (or custom VITE_BASE_PATH if set)
-  base: process.env.VITE_BASE_PATH || (process.env.NODE_ENV === 'production' ? '/LIVEINLAB/' : '/'),
+  // Vercel / Standard SPA root deployment:
+  // Base is '/' by default for Vercel and local development.
+  // Can be overridden via VITE_BASE_PATH if needed.
+  base: process.env.VITE_BASE_PATH || '/',
 
   plugins: [react()],
 
