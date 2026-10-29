@@ -1,0 +1,70 @@
+/* ==========================================================
+   VANNAM FOOTER — ARCHITECTURAL STUDIO
+   ========================================================== */
+
+.footer {
+  margin-top: auto;
+  padding: 2.5rem 0;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface);
+  position: relative;
+  z-index: 10;
+}
+
+.footerInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .footerInner {
+    flex-direction: row;
+  }
+}
+
+.statusGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tech-cyan);
+  box-shadow: 0 0 8px var(--tech-cyan);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.statusText {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--on-surface-variant);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.legalLinks {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  font-size: 0.82rem;
+  color: var(--on-surface-variant);
+}
+
+.legalLink {
+  transition: color 0.2s ease;
+}
+
+.legalLink:hover {
+  color: var(--on-surface);
+}

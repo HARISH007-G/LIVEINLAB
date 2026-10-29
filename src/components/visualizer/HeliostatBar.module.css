@@ -1,0 +1,185 @@
+.topControlToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--surface-container-low, #f8fafc);
+  border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.08));
+  border-radius: var(--radius-lg, 12px);
+  flex-wrap: wrap;
+}
+
+[data-theme='dark'] .topControlToolbar {
+  background: rgba(17, 24, 39, 0.7);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.lightingGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.heliostatLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--on-surface-variant, #64748b);
+  text-transform: uppercase;
+}
+
+.sunIcon {
+  color: var(--arch-amber, #d97706);
+}
+
+.presetsStrip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.lightTabBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.08));
+  border-radius: 6px;
+  font-family: var(--font-main, sans-serif);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--on-surface-variant, #64748b);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+[data-theme='dark'] .lightTabBtn {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+}
+
+.lightTabBtn:hover {
+  background: var(--surface-container-high, #e2e8f0);
+  color: var(--on-surface, #0f172a);
+}
+
+[data-theme='dark'] .lightTabBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.lightTabActive {
+  background: var(--primary-container, #dbeafe) !important;
+  border-color: var(--primary, #2563eb) !important;
+  color: var(--on-primary-container, #1e40af) !important;
+  font-weight: 600;
+}
+
+[data-theme='dark'] .lightTabActive {
+  background: rgba(37, 99, 235, 0.22) !important;
+  border-color: var(--tech-cyan, #22d3ee) !important;
+  color: #38bdf8 !important;
+}
+
+.tabIcon {
+  color: inherit;
+}
+
+.presetName {
+  white-space: nowrap;
+}
+
+.kelvinTag {
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  background: var(--surface-container-high, #e2e8f0);
+  border-radius: 3px;
+  color: var(--on-surface, #0f172a);
+}
+
+[data-theme='dark'] .kelvinTag {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+}
+
+.elevationTag {
+  font-family: var(--font-mono, monospace);
+  font-size: 8.5px;
+  font-weight: 600;
+  color: var(--on-surface-variant, #64748b);
+  opacity: 0.8;
+}
+
+.roverSimBtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--tech-panel-border, rgba(14, 165, 233, 0.35));
+  border-radius: var(--radius-md, 8px);
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--primary, #2563eb);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme='dark'] .roverSimBtn {
+  background: rgba(14, 165, 233, 0.08);
+  border-color: rgba(34, 211, 238, 0.35);
+  color: var(--tech-cyan, #22d3ee);
+}
+
+.roverSimBtn:hover {
+  background: var(--primary-container, #dbeafe);
+  box-shadow: 0 2px 10px rgba(14, 165, 233, 0.2);
+}
+
+[data-theme='dark'] .roverSimBtn:hover {
+  background: rgba(34, 211, 238, 0.16);
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.25);
+}
+
+.roverSimBtnActive {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: var(--error, #ef4444) !important;
+  color: var(--error, #ef4444) !important;
+}
+
+.roverIconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.roverBtnText {
+  white-space: nowrap;
+}
+
+.livePulseDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--error, #ef4444);
+  animation: pulseLive 1.2s infinite;
+}
+
+@keyframes pulseLive {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.4; }
+}

@@ -1,0 +1,119 @@
+.dockWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.actionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.12));
+  border-radius: var(--radius-md, 8px);
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--on-surface, #1e293b);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+[data-theme='dark'] .actionBtn {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+}
+
+.actionBtn:hover {
+  background: var(--surface-container-high, #f1f5f9);
+  border-color: var(--primary, #2563eb);
+  color: var(--primary, #2563eb);
+}
+
+[data-theme='dark'] .actionBtn:hover {
+  background: rgba(34, 211, 238, 0.1);
+  border-color: var(--tech-cyan, #22d3ee);
+  color: var(--tech-cyan, #22d3ee);
+}
+
+.primaryBtn {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+}
+
+.primaryBtn:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
+
+[data-theme='dark'] .primaryBtn {
+  background: rgba(34, 211, 238, 0.18);
+  border-color: var(--tech-cyan, #22d3ee);
+  color: var(--tech-cyan, #22d3ee);
+}
+
+[data-theme='dark'] .primaryBtn:hover {
+  background: var(--tech-cyan, #22d3ee);
+  color: #0b1220;
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
+.endIcon {
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+.btnText {
+  white-space: nowrap;
+}
+
+.projectGroup {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.projectBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 8px;
+  background: var(--surface-container-low, #f8fafc);
+  border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.08));
+  border-radius: var(--radius-md, 6px);
+  font-family: var(--font-mono, monospace);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--on-surface-variant, #64748b);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+[data-theme='dark'] .projectBtn {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+}
+
+.projectBtn:hover {
+  background: var(--surface-container-high, #e2e8f0);
+  color: var(--on-surface, #0f172a);
+}
+
+[data-theme='dark'] .projectBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}

@@ -1,750 +1,1417 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useLocation, NavLink } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
-import { Upload, RefreshCw, AlertCircle } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
-import { paintDatabase } from '../data/paintDatabase';
-import {
-    analyzeLighting,
-    applyRealisticPaint,
-    blendEdges
-} from '../utils/advancedPaintEngine';
-import styles from './Visualizer.module.css';
-import wallImageDefault from '../assets/wallimg.jpeg';
+import confetti from 'canvas-confetti';
+import { ArrowLeft, ExternalLink, Sun, Moon } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
-const ALL_TONES = ['violet', 'indigo', 'blue', 'green', 'yellow', 'orange', 'red', 'neutral'];
+import { createPaintEngine, hexToRgb } from '../utils/advancedPaintEngine';
+import { createSurfaceStore } from '../store/surfaceStore';
+import { curatedPaintDatabase, BRANDS } from '../data/paintDatabase';
+import { samplePresets } from '../data/samplePresets';
+import { LIGHTING_PRESETS, getLightingPreset } from '../utils/lightingEngine';
+import { FINISH_PRESETS, getFinishPreset } from '../utils/textureEngine';
+import { generateArchitecturalPalette } from '../utils/colorHarmonizer';
+import { RoverSimulator } from '../utils/roverSimulator';
+import { generateArchitecturalSpecSheet } from '../utils/specSheetGenerator';
+import { encodeMaskRLE, decodeMaskRLE, validateVannamProject } from '../utils/maskSerializer';
+
+import ViewportIngestor from '../components/visualizer/ViewportIngestor';
+import CadLayerMatrix from '../components/visualizer/CadLayerMatrix';
+import InstrumentDock from '../components/visualizer/InstrumentDock';
+import VernierCalipers from '../components/visualizer/VernierCalipers';
+import HeliostatBar from '../components/visualizer/HeliostatBar';
+import ComparisonSplitShutter from '../components/visualizer/ComparisonSplitShutter';
+import LeicaLoupe from '../components/visualizer/LeicaLoupe';
+import RoverTelemetryHud from '../components/visualizer/RoverTelemetryHud';
+import PhysicalSwatchPlate from '../components/visualizer/PhysicalSwatchPlate';
+import MaterialFinishTiles from '../components/visualizer/MaterialFinishTiles';
+import PigmentSynthesizer from '../components/visualizer/PigmentSynthesizer';
+import GoldenRatioHarmonizer from '../components/visualizer/GoldenRatioHarmonizer';
+import FanDeckMatrix from '../components/visualizer/FanDeckMatrix';
+import SpecSheetExporter from '../components/visualizer/SpecSheetExporter';
+import MaskRefinementModal from '../components/visualizer/MaskRefinementModal';
+import VannamSciFiLoader from '../components/VannamSciFiLoader';
+
+import styles from './Visualizer.module.css';
+
+// Helper to convert RGB numbers to Hex string
+const rgbToHexStr = (r, g, b) => {
+  const clamp = (val) => Math.max(0, Math.min(255, Math.round(Number(val) || 0)));
+  const toHex = (n) => clamp(n).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+};
+
+// Helper to calculate Light Reflectance Value (LRV)
+const calculateLRV = (hex) => {
+  if (!hex || hex[0] !== '#') return 50;
+  const cleanHex = hex.replace('#', '');
+  const r = parseInt(cleanHex.substring(0, 2), 16) / 255;
+  const g = parseInt(cleanHex.substring(2, 4), 16) / 255;
+  const b = parseInt(cleanHex.substring(4, 6), 16) / 255;
+  const lrv = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return Math.round(lrv * 100);
+};
 
 const Visualizer = () => {
-    const { t } = useLanguage();
-    const [image, setImage] = useState(null);
-    const [imageLoaded, setImageLoaded] = useState(false);
-    const [paintType, setPaintType] = useState('exterior');
-    const [selectedTone, setSelectedTone] = useState('all');
-    const [selectedBrand, setSelectedBrand] = useState('all');
-    const [selectedColor, setSelectedColor] = useState(null);
-    const [toolMode, setToolMode] = useState('wallFill');
-    const [analyzing, setAnalyzing] = useState(false);
-    const [analysisResult, setAnalysisResult] = useState(null);
-    const [validationError, setValidationError] = useState(null);
-    const [lightingData, setLightingData] = useState(null);
-    const [processingStage, setProcessingStage] = useState('');
-    const [wallBoundaryCanvas, setWallBoundaryCanvas] = useState(null);
-    
-    // NEW: Detection settings
-    const [edgeThreshold, setEdgeThreshold] = useState(40);
-    const [colorTolerance, setColorTolerance] = useState(70);
-    
-    // NEW: Debounce timer for smooth color changes
-    const paintTimerRef = useRef(null);
-    const isPaintingRef = useRef(false);
-    
-    const canvasRef = useRef(null);
-    const lastAutoPaintRef = useRef(null);
+  const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
-    const formatLabel = (value, fallback = 'Unknown') => {
-        if (!value || typeof value !== 'string') return fallback;
-        return value
-            .split(/[_\s-]+/)
-            .filter(Boolean)
-            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-            .join(' ');
-    };
+  // Parse Initial Color from URL Query Parameters
+  const initialColorFromUrl = useMemo(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const colorHex = searchParams.get('color');
+    const colorCode = searchParams.get('code');
+    const colorName = searchParams.get('name');
+    const colorBrand = searchParams.get('brand');
 
-    const getActiveMaskSource = () => {
-        if (wallBoundaryCanvas?.wallMap) {
-            return {
-                mask: wallBoundaryCanvas.wallMap,
-                width: wallBoundaryCanvas.width,
-                height: wallBoundaryCanvas.height
-            };
-        }
-        return null;
-    };
+    if (colorHex) {
+      const match = curatedPaintDatabase.find(
+        (c) =>
+          c.hex.toLowerCase() === colorHex.toLowerCase() ||
+          (colorCode && c.code === colorCode)
+      );
+      if (match) return match;
+      return {
+        code: colorCode || 'CUSTOM',
+        name: colorName || 'Custom Shade',
+        brand: colorBrand || 'Custom Mix',
+        hex: colorHex.startsWith('#') ? colorHex : `#${colorHex}`,
+        tone: 'custom',
+        type: 'both',
+        finish: 'Matte',
+        rooms: ['Living Room'],
+        description: 'Custom shade selected by color code.'
+      };
+    }
+    return curatedPaintDatabase[0];
+  }, [location.search]);
 
-    const mapMaskToCanvas = (maskData, sourceWidth, sourceHeight) => {
-        const canvas = canvasRef.current;
-        if (!canvas || !maskData || !sourceWidth || !sourceHeight) return null;
-        if (sourceWidth === canvas.width && sourceHeight === canvas.height) return maskData;
-        
-        const scaled = new Uint8Array(canvas.width * canvas.height);
-        const scaleX = sourceWidth / canvas.width;
-        const scaleY = sourceHeight / canvas.height;
-        
-        for (let y = 0; y < canvas.height; y++) {
-            const sy = Math.min(Math.floor(y * scaleY), sourceHeight - 1);
-            for (let x = 0; x < canvas.width; x++) {
-                const sx = Math.min(Math.floor(x * scaleX), sourceWidth - 1);
-                scaled[y * canvas.width + x] = maskData[sy * sourceWidth + sx];
-            }
-        }
-        return scaled;
-    };
+  // Primary Viewport State
+  const [activeImageSrc, setActiveImageSrc] = useState(samplePresets[0].src);
+  const [activePresetId, setActivePresetId] = useState(samplePresets[0].id);
+  const [isEngineReady, setIsEngineReady] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingMsg, setProcessingMsg] = useState('');
 
-    // ========================================
-    // OPTIMIZED WALL DETECTION - NO LINES, FAST
-    // ========================================
-    const detectWallAreas = (img) => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Optimize processing size for speed
-        const maxWidth = 600; // Reduced for faster processing
-        const scale = Math.min(1, maxWidth / img.width);
-        canvas.width = Math.floor(img.width * scale);
-        canvas.height = Math.floor(img.height * scale);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  // Multi-Surface CAD State
+  const [surfaces, setSurfaces] = useState([]);
+  const [activeSurfaceId, setActiveSurfaceId] = useState(null);
+  const [hiddenSurfaces, setHiddenSurfaces] = useState(new Set());
+  const [lockedSurfaces, setLockedSurfaces] = useState(new Set());
+  const [isAddingSurface, setIsAddingSurface] = useState(false);
+  const [isReviewMode, setIsReviewMode] = useState(false);
+  const [reviewSurfaceIndex, setReviewSurfaceIndex] = useState(0);
 
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-        const width = canvas.width;
-        const height = canvas.height;
+  // Tools & Settings
+  const [activeTool, setActiveTool] = useState('smart-brush'); // 'smart-brush' | 'wand' | 'brush' | 'eraser' | 'loupe'
+  const [isRefineModalOpen, setIsRefineModalOpen] = useState(false);
+  const [detectionSensitivity, setDetectionSensitivity] = useState(80);
+  const [brushSize, setBrushSize] = useState(28);
+  const [brushSoftness, setBrushSoftness] = useState(40);
+  const [wandTolerance, setWandTolerance] = useState(35);
+  const [edgeSnapSetting, setEdgeSnapSetting] = useState('MEDIUM'); // 'OFF' | 'LOW' | 'MEDIUM' | 'HIGH'
+  const [debugMode, setDebugMode] = useState(false);
 
-        console.log('🎨 Optimized detection:', width, 'x', height);
-        setProcessingStage('Analyzing image...');
+  const projectFileInputRef = useRef(null);
 
-        // STEP 1: Convert to grayscale
-        const gray = new Uint8Array(width * height);
-        for (let i = 0; i < data.length; i += 4) {
-            gray[i / 4] = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-        }
-        
-        // STEP 2: Edge detection - SIMPLIFIED for speed
-        const edges = new Uint8Array(width * height);
-        for (let y = 2; y < height - 2; y++) {
-            for (let x = 2; x < width - 2; x++) {
-                const idx = y * width + x;
-                
-                // Simple horizontal and vertical gradients
-                const gx = Math.abs(gray[idx + 1] - gray[idx - 1]);
-                const gy = Math.abs(gray[idx + width] - gray[idx - width]);
-                const magnitude = gx + gy;
-                
-                edges[idx] = magnitude > edgeThreshold ? 1 : 0;
-            }
-        }
+  // Lighting & Finish State
+  const [activeLighting, setActiveLighting] = useState('midday');
+  const [activeFinish, setActiveFinish] = useState('matte');
 
-        setProcessingStage('Detecting walls...');
+  // Paint Simulation Settings
+  const [selectedColor, setSelectedColor] = useState(initialColorFromUrl);
+  const [selectedBrand, setSelectedBrand] = useState('Asian Paints');
 
-        // STEP 3: Smart exclusion map
-        const excludeMap = new Uint8Array(width * height);
-        
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const idx = y * width + x;
-                const brightness = gray[idx];
-                const pixelIdx = idx * 4;
-                const r = data[pixelIdx];
-                const g = data[pixelIdx + 1];
-                const b = data[pixelIdx + 2];
-                
-                // Sky exclusion (top 12%)
-                if (y < height * 0.12 && brightness > 170) {
-                    excludeMap[idx] = 1;
-                    continue;
-                }
-                
-                // Ground exclusion (bottom 8%)
-                if (y > height * 0.92 && brightness < 110) {
-                    excludeMap[idx] = 1;
-                    continue;
-                }
-                
-                // Extreme brightness
-                if (brightness < 15 || brightness > 250) {
-                    excludeMap[idx] = 1;
-                    continue;
-                }
-                
-                // Strong edges
-                if (edges[idx] === 1) {
-                    excludeMap[idx] = 1;
-                    continue;
-                }
-                
-                // Vegetation
-                if (g > r + 35 && g > b + 30) {
-                    excludeMap[idx] = 1;
-                    continue;
-                }
-                
-                // Windows/very bright spots
-                if (brightness > 235 && y > height * 0.15 && y < height * 0.85) {
-                    excludeMap[idx] = 1;
-                }
-            }
-        }
+  // Custom Color Code Input Mode ('hex' | 'rgb')
+  const [colorInputMode, setColorInputMode] = useState('hex');
+  const [customHexInput, setCustomHexInput] = useState(initialColorFromUrl.hex);
+  const [copiedHex, setCopiedHex] = useState(false);
 
-        // STEP 4: Generate wall seed points - OPTIMIZED
-        const seedPoints = [];
-        const seedStride = 10; // Larger stride for speed
-        
-        for (let y = Math.floor(height * 0.30); y < height * 0.70; y += seedStride) {
-            for (let x = Math.floor(width * 0.20); x < width * 0.80; x += seedStride) {
-                const idx = y * width + x;
-                if (excludeMap[idx] === 0 && edges[idx] === 0) {
-                    const brightness = gray[idx];
-                    if (brightness > 60 && brightness < 210) {
-                        seedPoints.push(idx);
-                    }
-                }
-            }
-        }
+  // Custom RGB inputs
+  const initialRgb = hexToRgb(initialColorFromUrl.hex);
+  const [customR, setCustomR] = useState(initialRgb.r);
+  const [customG, setCustomG] = useState(initialRgb.g);
+  const [customB, setCustomB] = useState(initialRgb.b);
 
-        console.log('🌱 Seeds:', seedPoints.length);
+  // Viewport & Comparison State
+  const [splitPos, setSplitPos] = useState(0.5);
+  const [showMask, setShowMask] = useState(false);
 
-        if (seedPoints.length === 0) {
-            seedPoints.push(Math.floor(height * 0.5) * width + Math.floor(width * 0.5));
-        }
+  // Rover Simulator State
+  const [isRoverSimulating, setIsRoverSimulating] = useState(false);
+  const [roverTelemetry, setRoverTelemetry] = useState(null);
 
-        // Calculate reference color
-        let avgR = 0, avgG = 0, avgB = 0;
-        for (const idx of seedPoints) {
-            const p = idx * 4;
-            avgR += data[p];
-            avgG += data[p + 1];
-            avgB += data[p + 2];
-        }
-        avgR /= seedPoints.length;
-        avgG /= seedPoints.length;
-        avgB /= seedPoints.length;
+  // Live Cursor Overlay & Magnifier Loupe
+  const [cursorPos, setCursorPos] = useState({ x: -100, y: -100, visible: false });
+  const [loupeState, setLoupeState] = useState({ x: -100, y: -100, visible: false });
+  const loupeCanvasRef = useRef(null);
 
-        console.log('🎯 Wall color:', Math.round(avgR), Math.round(avgG), Math.round(avgB));
+  // Refs for Stable Rendering Loop
+  const canvasRef = useRef(null);
+  const canvasCardRef = useRef(null);
+  const engineRef = useRef(null);
+  const surfaceStoreRef = useRef(createSurfaceStore());
+  const roverSimRef = useRef(new RoverSimulator());
+  const renderFrameIdRef = useRef(null);
+  const roverAnimFrameRef = useRef(null);
 
-        // STEP 5: Fast region growing with 8-connectivity for better filling
-        const wallMask = new Uint8Array(width * height);
-        const visited = new Uint8Array(width * height);
-        const queue = [...seedPoints];
-        
-        for (const idx of seedPoints) {
-            visited[idx] = 1;
-        }
-        
-        while (queue.length > 0) {
-            const idx = queue.shift();
-            const x = idx % width;
-            const y = Math.floor(idx / width);
-            
-            if (excludeMap[idx] === 0) {
-                const p = idx * 4;
-                const colorDist = Math.abs(data[p] - avgR) + 
-                                Math.abs(data[p + 1] - avgG) + 
-                                Math.abs(data[p + 2] - avgB);
-                
-                if (colorDist < colorTolerance) {
-                    wallMask[idx] = 1;
-                    
-                    // 8-connected neighbors for complete filling
-                    const neighbors = [
-                        idx - 1, idx + 1,           // horizontal
-                        idx - width, idx + width,   // vertical
-                        idx - width - 1, idx - width + 1,  // diagonal top
-                        idx + width - 1, idx + width + 1   // diagonal bottom
-                    ];
-                    
-                    for (const nIdx of neighbors) {
-                        if (nIdx < 0 || nIdx >= width * height || visited[nIdx]) continue;
-                        
-                        const nx = nIdx % width;
-                        const ny = Math.floor(nIdx / width);
-                        
-                        // Prevent wrapping
-                        if (Math.abs(nx - x) <= 1 && Math.abs(ny - y) <= 1) {
-                            visited[nIdx] = 1;
-                            queue.push(nIdx);
-                        }
-                    }
-                }
-            }
-        }
+  const isPointerDownRef = useRef(false);
+  const isDraggingSplitRef = useRef(false);
+  const isDraggingHandleRef = useRef(false);
+  const lastPointerRef = useRef({ x: 0, y: 0 });
 
-        setProcessingStage('Smoothing...');
+  const fileInputRef = useRef(null);
+  const nativeColorPickerRef = useRef(null);
 
-        // STEP 6: Advanced morphological operations - REMOVE HORIZONTAL LINES
-        const temp = new Uint8Array(width * height);
-        
-        // First pass: Closing operation (fill gaps)
-        for (let y = 2; y < height - 2; y++) {
-            for (let x = 2; x < width - 2; x++) {
-                const idx = y * width + x;
-                
-                if (wallMask[idx] === 1) {
-                    temp[idx] = 1;
-                } else {
-                    // Count surrounding wall pixels in 5x5 area
-                    let count = 0;
-                    for (let dy = -2; dy <= 2; dy++) {
-                        for (let dx = -2; dx <= 2; dx++) {
-                            if (wallMask[(y+dy)*width + (x+dx)] === 1) count++;
-                        }
-                    }
-                    // Fill if mostly surrounded
-                    if (count >= 15) temp[idx] = 1;
-                }
-            }
-        }
+  // State Refs for Non-reactive Render Calls
+  const surfacesRef = useRef(surfaces);
+  surfacesRef.current = surfaces;
 
-        // Second pass: Remove small isolated regions and horizontal artifacts
-        const final = new Uint8Array(width * height);
-        for (let y = 1; y < height - 1; y++) {
-            for (let x = 1; x < width - 1; x++) {
-                const idx = y * width + x;
-                
-                if (temp[idx] === 1) {
-                    // Check for horizontal line artifacts
-                    const left = temp[idx - 1];
-                    const right = temp[idx + 1];
-                    const up = temp[idx - width];
-                    const down = temp[idx + width];
-                    const upLeft = temp[idx - width - 1];
-                    const upRight = temp[idx - width + 1];
-                    const downLeft = temp[idx + width - 1];
-                    const downRight = temp[idx + width + 1];
-                    
-                    const neighbors = left + right + up + down + upLeft + upRight + downLeft + downRight;
-                    
-                    // Only keep if well-connected (not isolated line)
-                    if (neighbors >= 3) {
-                        final[idx] = 1;
-                    }
-                }
-            }
-        }
+  const hiddenSurfacesRef = useRef(hiddenSurfaces);
+  hiddenSurfacesRef.current = hiddenSurfaces;
 
-        // Calculate coverage
-        let coverage = 0;
-        for (let i = 0; i < final.length; i++) {
-            if (final[i] === 1) coverage++;
-        }
-        
-        const coveragePercent = (coverage / (width * height) * 100).toFixed(1);
-        console.log('✅ Detection:', coveragePercent + '%,', coverage, 'pixels');
+  const activeLightingRef = useRef(activeLighting);
+  activeLightingRef.current = activeLighting;
 
-        setProcessingStage('');
+  const activeFinishRef = useRef(activeFinish);
+  activeFinishRef.current = activeFinish;
 
-        return {
-            canvas,
-            wallMap: final,
-            width,
-            height,
-            coverage: coveragePercent
-        };
-    };
+  const splitPosRef = useRef(splitPos);
+  splitPosRef.current = splitPos;
 
-    const paintAllWalls = (colorHex) => {
-        if (!selectedColor || isPaintingRef.current) return;
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        
-        isPaintingRef.current = true;
-        
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const showMaskRef = useRef(showMask);
+  showMaskRef.current = showMask;
 
-        const maskSource = getActiveMaskSource();
-        if (!maskSource) {
-            isPaintingRef.current = false;
-            return;
-        }
+  const activeSurfaceIdRef = useRef(activeSurfaceId);
+  activeSurfaceIdRef.current = activeSurfaceId;
 
-        const normalizedMask = mapMaskToCanvas(maskSource.mask, maskSource.width, maskSource.height);
-        if (!normalizedMask) {
-            isPaintingRef.current = false;
-            return;
-        }
+  const debugModeRef = useRef(debugMode);
+  debugModeRef.current = debugMode;
 
-        const painted = applyRealisticPaint(
-            imageData,
-            normalizedMask,
-            colorHex,
-            lightingData,
-            canvas.width,
-            canvas.height,
-            {
-                surfaceCondition: analysisResult?.details?.condition,
-                wallType: analysisResult?.details?.type,
-                surfaceType: analysisResult?.details?.surfaceType
-            }
+  // Trigger Glitch-Free Redraw
+  const triggerCanvasRedraw = useCallback(() => {
+    if (renderFrameIdRef.current) {
+      cancelAnimationFrame(renderFrameIdRef.current);
+    }
+    renderFrameIdRef.current = requestAnimationFrame(() => {
+      if (engineRef.current && canvasRef.current) {
+        // Filter out hidden surfaces
+        const visibleSurfaces = surfacesRef.current.filter(
+          (s) => !hiddenSurfacesRef.current.has(s.id)
         );
+        engineRef.current.renderMultiSurfaceComposite(canvasRef.current, visibleSurfaces, {
+          splitPosition: splitPosRef.current,
+          lightingMode: activeLightingRef.current,
+          finish: activeFinishRef.current,
+          showMask: showMaskRef.current,
+          activeSurfaceId: activeSurfaceIdRef.current,
+          debugMode: debugModeRef.current
+        });
+      }
+    });
+  }, []);
 
-        if (painted > 0) {
-            blendEdges(imageData, normalizedMask, canvas.width, canvas.height);
-            ctx.putImageData(imageData, 0, 0);
-            console.log('✅ Paint applied:', painted, 'pixels');
-        }
-        
-        isPaintingRef.current = false;
-    };
+  // Synchronize Brand Selection
+  const filteredSwatches = useMemo(() => {
+    return curatedPaintDatabase.filter(
+      (c) => c.brand.toLowerCase() === selectedBrand.toLowerCase()
+    );
+  }, [selectedBrand]);
 
-    // DEBOUNCED paint function - prevents lag
-    const debouncedPaint = (colorHex) => {
-        // Clear existing timer
-        if (paintTimerRef.current) {
-            clearTimeout(paintTimerRef.current);
-        }
-        
-        // Set new timer - only paint after user stops changing color
-        paintTimerRef.current = setTimeout(() => {
-            if (image && wallBoundaryCanvas) {
-                drawImage(image);
-                setTimeout(() => paintAllWalls(colorHex), 50);
-            }
-        }, 150); // 150ms debounce - feels instant but prevents lag
-    };
+  // Synchronize 60-30-10 Architectural Harmonizer
+  const harmonizerPalette = useMemo(() => {
+    return generateArchitecturalPalette(selectedColor.hex);
+  }, [selectedColor.hex]);
 
-    const analyzeImage = async (img) => {
-        setAnalyzing(true);
-        setAnalysisResult(null);
-        setValidationError(null);
-        
-        try {
-            setProcessingStage('Analyzing image properties...');
-            
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
+  // Load Image and Initialize Surface Segmentation
+  const loadActiveImage = useCallback(
+    async (src) => {
+      setIsProcessing(true);
+      setProcessingMsg('Analyzing architectural surfaces & planar creases...');
+      setIsEngineReady(false);
 
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-            
-            let totalBrightness = 0;
-            let topBrightness = 0;
-            let topPixels = 0;
-            
-            for (let i = 0; i < data.length; i += 4) {
-                const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                totalBrightness += brightness;
-                
-                const pixelIdx = i / 4;
-                const y = Math.floor(pixelIdx / canvas.width);
-                if (y < canvas.height * 0.20) {
-                    topBrightness += brightness;
-                    topPixels++;
-                }
-            }
-            
-            const avgBrightness = totalBrightness / (data.length / 4);
-            const avgTopBrightness = topBrightness / topPixels;
-            const isExterior = avgTopBrightness > 180 || avgBrightness > 120;
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = async () => {
+          try {
+            const engine = createPaintEngine();
+            await engine.loadImage(img);
+            engineRef.current = engine;
 
-            const validation = {
-                isBuilding: true,
-                type: isExterior ? 'exterior' : 'interior',
-                surfaceType: 'plastered wall',
-                condition: 'clean',
-                confidence: 'high'
-            };
-
-            setPaintType(validation.type);
-
-            const lighting = analyzeLighting(imageData, canvas.width, canvas.height);
-            lighting.surfaceCondition = validation.condition;
-            lighting.wallType = validation.type;
-            lighting.surfaceType = validation.surfaceType;
-            setLightingData(lighting);
-
-            setAnalysisResult({
-                message: `${formatLabel(validation.type)} • ${formatLabel(validation.surfaceType)} • Smart Detection`,
-                details: validation
+            // Auto-detect independent wall surfaces
+            const detectedSurfaces = await engine.segmentSurfaces({
+              sensitivity: detectionSensitivity / 100
             });
 
-        } catch (error) {
-            console.error('Analysis error:', error);
-        } finally {
-            setAnalyzing(false);
-            setProcessingStage('');
-        }
-    };
+            surfaceStoreRef.current.setSurfaces(detectedSurfaces);
+            const currentList = surfaceStoreRef.current.getSurfaces();
+            setSurfaces(currentList);
 
-    const availableBrands = useMemo(() => {
-        const typeData = paintDatabase[paintType];
-        if (!typeData) return [];
-        const brands = new Set(ALL_TONES.flatMap(tone => (typeData[tone] || []).map(c => c.brand)));
-        return Array.from(brands).sort();
-    }, [paintType]);
-
-    const filteredColors = useMemo(() => {
-        const typeData = paintDatabase[paintType];
-        if (!typeData) return [];
-        
-        let toneFilter = selectedTone === 'all' ? ALL_TONES : [selectedTone];
-        toneFilter = toneFilter.filter(tone => typeData[tone]);
-        let colors = toneFilter.flatMap(tone => typeData[tone] || []);
-        
-        if (selectedBrand !== 'all') {
-            colors = colors.filter(c => c.brand === selectedBrand);
-        }
-        
-        return colors;
-    }, [paintType, selectedTone, selectedBrand]);
-
-    useEffect(() => {
-        if (filteredColors.length > 0 && (!selectedColor || !filteredColors.find(c => c.code === selectedColor.code))) {
-            setSelectedColor(filteredColors[0]);
-        }
-    }, [filteredColors, selectedColor]);
-
-    const drawImage = (img) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        const containerWidth = canvas.parentElement?.clientWidth || 800;
-        const scale = Math.min(1, containerWidth / img.width);
-        
-        canvas.width = Math.floor(img.width * scale);
-        canvas.height = Math.floor(img.height * scale);
-        
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        
-        const wallData = detectWallAreas(img);
-        setWallBoundaryCanvas(wallData);
-    };
-
-    useEffect(() => {
-        if (image && canvasRef.current) {
-            // Only redraw when image actually changes, not on settings change
-            drawImage(image);
-        }
-    }, [image]);
-
-    useEffect(() => {
-        if (image && selectedColor && wallBoundaryCanvas && toolMode === 'wallFill') {
-            debouncedPaint(selectedColor.hex);
-        }
-        
-        // Cleanup timer on unmount
-        return () => {
-            if (paintTimerRef.current) {
-                clearTimeout(paintTimerRef.current);
+            if (currentList.length > 0) {
+              setActiveSurfaceId(currentList[0].id);
+              setSelectedColor({
+                code: `SRF-${currentList[0].id}`,
+                name: currentList[0].name,
+                brand: 'Detected Surface',
+                hex: currentList[0].color,
+                finish: currentList[0].finish
+              });
             }
+
+            setIsEngineReady(true);
+            setIsProcessing(false);
+            triggerCanvasRedraw();
+          } catch (innerErr) {
+            console.warn('Engine load fallback', innerErr);
+            setIsProcessing(false);
+            setIsEngineReady(true);
+            triggerCanvasRedraw();
+          }
         };
-    }, [selectedColor, toolMode]);
-
-    useEffect(() => {
-        const img = new Image();
-        img.onload = () => {
-            setImage(img);
-            setImageLoaded(true);
-            setTimeout(() => analyzeImage(img), 100);
+        img.onerror = () => {
+          console.warn('Failed to load image from:', src);
+          setIsProcessing(false);
+          setIsEngineReady(true);
         };
-        img.src = wallImageDefault;
-    }, []);
+        img.src = src;
+      } catch (err) {
+        console.error(err);
+        setIsProcessing(false);
+      }
+    },
+    [detectionSensitivity, triggerCanvasRedraw]
+  );
 
-    const handleCanvasClick = (e) => {
-        if (image && selectedColor) {
-            drawImage(image);
-            setTimeout(() => paintAllWalls(selectedColor.hex), 50);
-        }
+  // Re-run Automatic Surface Detection on Demand
+  const handleAutoDetectSurfaces = async () => {
+    if (!engineRef.current) return;
+    setIsProcessing(true);
+    setProcessingMsg('Auto-detecting independent wall planes & protected boundaries...');
+    try {
+      const detectedSurfaces = await engineRef.current.segmentSurfaces({
+        sensitivity: detectionSensitivity / 100
+      });
+      surfaceStoreRef.current.setSurfaces(detectedSurfaces);
+      const currentList = surfaceStoreRef.current.getSurfaces();
+      setSurfaces(currentList);
+      if (currentList.length > 0) {
+        setActiveSurfaceId(currentList[0].id);
+      }
+      setIsProcessing(false);
+      triggerCanvasRedraw();
+    } catch (err) {
+      console.error(err);
+      setIsProcessing(false);
+    }
+  };
+
+  // Load Image when activeImageSrc changes
+  useEffect(() => {
+    loadActiveImage(activeImageSrc);
+  }, [activeImageSrc, loadActiveImage]);
+
+  // Re-render when visual parameters change
+  useEffect(() => {
+    if (isEngineReady) {
+      triggerCanvasRedraw();
+    }
+  }, [
+    isEngineReady,
+    splitPos,
+    showMask,
+    activeLighting,
+    activeFinish,
+    activeSurfaceId,
+    debugMode,
+    hiddenSurfaces,
+    triggerCanvasRedraw
+  ]);
+
+  // Rover Simulation Animation Loop
+  const runRoverSimulationLoop = useCallback(() => {
+    if (!isRoverSimulating) return;
+
+    const sim = roverSimRef.current;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    sim.update(selectedColor.hex);
+    setRoverTelemetry({ ...sim.telemetry });
+
+    triggerCanvasRedraw();
+
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      sim.draw(ctx, canvas.width, canvas.height);
+    }
+
+    roverAnimFrameRef.current = requestAnimationFrame(runRoverSimulationLoop);
+  }, [isRoverSimulating, selectedColor.hex, triggerCanvasRedraw]);
+
+  useEffect(() => {
+    if (isRoverSimulating) {
+      const activeSurface = surfaces.find((s) => s.id === activeSurfaceId);
+      const canvas = canvasRef.current;
+      const width = canvas ? canvas.width : 800;
+      const height = canvas ? canvas.height : 500;
+      const mask = activeSurface?.mask || new Uint8Array(width * height);
+      roverSimRef.current.planPathFromMask(mask, width, height);
+      roverAnimFrameRef.current = requestAnimationFrame(runRoverSimulationLoop);
+    } else {
+      if (roverAnimFrameRef.current) {
+        cancelAnimationFrame(roverAnimFrameRef.current);
+      }
+      roverSimRef.current.stop();
+      setRoverTelemetry(null);
+      triggerCanvasRedraw();
+    }
+    return () => {
+      if (roverAnimFrameRef.current) {
+        cancelAnimationFrame(roverAnimFrameRef.current);
+      }
     };
+  }, [isRoverSimulating, activeSurfaceId, runRoverSimulationLoop, triggerCanvasRedraw, surfaces]);
 
-    const handleReset = () => {
-        if (image) {
-            drawImage(image);
-            setAnalysisResult(null);
-        }
-    };
+  // Surface Mutation Handlers
+  const handleColorSelect = (color) => {
+    setSelectedColor(color);
+    setCustomHexInput(color.hex);
+    const rgb = hexToRgb(color.hex);
+    setCustomR(rgb.r);
+    setCustomG(rgb.g);
+    setCustomB(rgb.b);
 
-    const onDrop = (acceptedFiles) => {
-        const file = acceptedFiles[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    setImage(img);
-                    analyzeImage(img);
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-    };
+    if (activeSurfaceId && !lockedSurfaces.has(activeSurfaceId)) {
+      surfaceStoreRef.current.updateSurface(activeSurfaceId, {
+        color: color.hex,
+        finish: color.finish || activeFinish
+      });
+      setSurfaces([...surfaceStoreRef.current.getSurfaces()]);
+      triggerCanvasRedraw();
+    }
+  };
 
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({
-        onDrop,
-        accept: { 'image/*': [] },
-        maxFiles: 1
+  const handleFinishSelect = (finishKey) => {
+    setActiveFinish(finishKey);
+    if (activeSurfaceId && !lockedSurfaces.has(activeSurfaceId)) {
+      surfaceStoreRef.current.updateSurface(activeSurfaceId, { finish: finishKey });
+      setSurfaces([...surfaceStoreRef.current.getSurfaces()]);
+      triggerCanvasRedraw();
+    }
+  };
+
+  const handleHexInputChange = (e) => {
+    let val = e.target.value.trim().toUpperCase();
+    if (!val.startsWith('#')) val = `#${val}`;
+    setCustomHexInput(val);
+
+    if (/^#[0-9A-F]{6}$/i.test(val)) {
+      const rgb = hexToRgb(val);
+      setCustomR(rgb.r);
+      setCustomG(rgb.g);
+      setCustomB(rgb.b);
+      handleColorSelect({
+        code: `HEX-${val.replace('#', '')}`,
+        name: `Custom ${val}`,
+        brand: 'Custom Synthesis',
+        hex: val,
+        tone: 'custom',
+        type: 'both',
+        finish: activeFinish
+      });
+    }
+  };
+
+  const handleCopyHex = (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(selectedColor.hex);
+    setCopiedHex(true);
+    setTimeout(() => setCopiedHex(false), 1800);
+  };
+
+  const handleRgbChange = (channel, val) => {
+    const num = Math.max(0, Math.min(255, parseInt(val, 10) || 0));
+    let newR = customR;
+    let newG = customG;
+    let newB = customB;
+
+    if (channel === 'r') {
+      setCustomR(num);
+      newR = num;
+    }
+    if (channel === 'g') {
+      setCustomG(num);
+      newG = num;
+    }
+    if (channel === 'b') {
+      setCustomB(num);
+      newB = num;
+    }
+
+    const hex = rgbToHexStr(newR, newG, newB);
+    setCustomHexInput(hex);
+    handleColorSelect({
+      code: `RGB-${newR}-${newG}-${newB}`,
+      name: `RGB(${newR}, ${newG}, ${newB})`,
+      brand: 'Custom Synthesis',
+      hex: hex,
+      tone: 'custom',
+      type: 'both',
+      finish: activeFinish
+    });
+  };
+
+  const handleNativePickerChange = (e) => {
+    const val = e.target.value.toUpperCase();
+    setCustomHexInput(val);
+    const rgb = hexToRgb(val);
+    setCustomR(rgb.r);
+    setCustomG(rgb.g);
+    setCustomB(rgb.b);
+    handleColorSelect({
+      code: `COLOR-${val.replace('#', '')}`,
+      name: `Color ${val}`,
+      brand: 'Custom Mix',
+      hex: val,
+      tone: 'custom',
+      type: 'both',
+      finish: activeFinish
+    });
+  };
+
+  // Layer Lock & Visibility Toggles
+  const handleToggleVisibility = (surfaceId, e) => {
+    e.stopPropagation();
+    setHiddenSurfaces((prev) => {
+      const next = new Set(prev);
+      if (next.has(surfaceId)) {
+        next.delete(surfaceId);
+      } else {
+        next.add(surfaceId);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleLock = (surfaceId, e) => {
+    e.stopPropagation();
+    setLockedSurfaces((prev) => {
+      const next = new Set(prev);
+      if (next.has(surfaceId)) {
+        next.delete(surfaceId);
+      } else {
+        next.add(surfaceId);
+      }
+      return next;
+    });
+  };
+
+  // 1-Click Harmonizer Distribution with tactile Confetti burst
+  const handleApplyHarmonizerToSurfaces = () => {
+    if (!harmonizerPalette || surfaces.length === 0) return;
+
+    const surfaceList = surfaceStoreRef.current.getSurfaces();
+    const secondaryHex = (harmonizerPalette.subordinate || harmonizerPalette.secondary)?.hex;
+
+    if (surfaceList.length >= 1 && harmonizerPalette.dominant?.hex) {
+      surfaceStoreRef.current.updateSurface(surfaceList[0].id, {
+        color: harmonizerPalette.dominant.hex
+      });
+    }
+    if (surfaceList.length >= 2 && secondaryHex) {
+      surfaceStoreRef.current.updateSurface(surfaceList[1].id, {
+        color: secondaryHex
+      });
+    }
+    if (surfaceList.length >= 3 && harmonizerPalette.accent?.hex) {
+      surfaceStoreRef.current.updateSurface(surfaceList[2].id, {
+        color: harmonizerPalette.accent.hex
+      });
+    }
+
+    setSurfaces([...surfaceStoreRef.current.getSurfaces()]);
+    triggerCanvasRedraw();
+
+    try {
+      confetti({
+        particleCount: 30,
+        spread: 60,
+        origin: { y: 0.8 },
+        colors: [
+          harmonizerPalette?.dominant?.hex || '#2563EB',
+          secondaryHex || '#0EA5E9',
+          harmonizerPalette?.accent?.hex || '#D97706'
+        ]
+      });
+    } catch (_) {}
+  };
+
+  // 1-Click Executive Spec Sheet Export
+  const handleExportSpecSheet = () => {
+    const specData = generateArchitecturalSpecSheet({
+      surfaces: surfaceStoreRef.current.getSurfaces(),
+      activeLighting,
+      activeFinish,
+      buildingPreset: activePresetId
     });
 
-    return (
-        <div className={styles.visualizerPage}>
-            <div className="container">
-                <h1 className="title-gradient">{t('visualizer.title')}</h1>
-                
-                {validationError && (
-                    <div className={styles.errorBanner}>
-                        <AlertCircle size={20} />
-                        {validationError}
-                    </div>
-                )}
+    const blob = new Blob([specData.markdownContent], {
+      type: 'text/markdown;charset=utf-8'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `VANNAM-Architectural-Spec-${Date.now()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
 
-                <div className={styles.workspace}>
-                    <div className={styles.featuredColorsOutside}>
-                        <h3>Select Tone (VIBGYOR)</h3>
-                        <div className={styles.toneSelector}>
-                            <button
-                                type="button"
-                                className={`${styles.toneBtn} ${selectedTone === 'all' ? styles.activeTone : ''}`}
-                                onClick={() => setSelectedTone('all')}
-                            >
-                                All
-                            </button>
-                            {ALL_TONES.map(tone => (
-                                <button
-                                    type="button"
-                                    key={tone}
-                                    className={`${styles.toneBtn} ${selectedTone === tone ? styles.activeTone : ''}`}
-                                    onClick={() => setSelectedTone(tone)}
-                                >
-                                    {formatLabel(tone)}
-                                </button>
-                            ))}
-                        </div>
+    try {
+      confetti({
+        particleCount: 40,
+        spread: 70,
+        origin: { y: 0.85 },
+        colors: ['#2563EB', '#0EA5E9', '#10B981']
+      });
+    } catch (_) {}
+  };
 
-                        {/* NEW: Detection Settings Controls */}
-                        <div style={{ marginTop: '2rem' }}>
-                            <h3 style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>Detection Settings</h3>
-                            
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
-                                    Edge Sensitivity: {edgeThreshold}
-                                </label>
-                                <input
-                                    type="range"
-                                    min="20"
-                                    max="80"
-                                    value={edgeThreshold}
-                                    onChange={(e) => {
-                                        setEdgeThreshold(parseInt(e.target.value));
-                                        // Redraw image when settings change
-                                        if (image) {
-                                            setTimeout(() => {
-                                                drawImage(image);
-                                                if (selectedColor && toolMode === 'wallFill') {
-                                                    setTimeout(() => paintAllWalls(selectedColor.hex), 100);
-                                                }
-                                            }, 300);
-                                        }
-                                    }}
-                                    style={{ width: '100%' }}
-                                />
-                            </div>
+  // High-Resolution Image Export (PNG)
+  const handleExportRender = (format = 'png') => {
+    if (!engineRef.current || !canvasRef.current) return;
+    try {
+      const exportCanvas = document.createElement('canvas');
+      const currentSurfaces = surfaceStoreRef.current.getSurfaces().filter(
+        (s) => !hiddenSurfacesRef.current.has(s.id)
+      );
 
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
-                                    Color Tolerance: {colorTolerance}
-                                </label>
-                                <input
-                                    type="range"
-                                    min="40"
-                                    max="120"
-                                    value={colorTolerance}
-                                    onChange={(e) => {
-                                        setColorTolerance(parseInt(e.target.value));
-                                        // Redraw image when settings change
-                                        if (image) {
-                                            setTimeout(() => {
-                                                drawImage(image);
-                                                if (selectedColor && toolMode === 'wallFill') {
-                                                    setTimeout(() => paintAllWalls(selectedColor.hex), 100);
-                                                }
-                                            }, 300);
-                                        }
-                                    }}
-                                    style={{ width: '100%' }}
-                                />
-                            </div>
-                        </div>
-                    </div>
+      engineRef.current.renderMultiSurfaceComposite(exportCanvas, currentSurfaces, {
+        lightingMode: activeLightingRef.current,
+        finish: activeFinishRef.current,
+        showMask: false,
+        debugMode: false
+      });
 
-                    <div className={styles.mainArea}>
-                        {!image ? (
-                            <div
-                                {...getRootProps()}
-                                className={`${styles.dropzone} ${isDragActive ? styles.dragActive : ''}`}
-                            >
-                                <input {...getInputProps()} />
-                                <Upload size={48} />
-                                <p>Drag building image or click to upload</p>
-                            </div>
-                        ) : (
-                            <div className={styles.canvasContainer}>
-                                <canvas ref={canvasRef} onClick={handleCanvasClick} />
-                                {analyzing && (
-                                    <div className={styles.overlay}>
-                                        <div className={styles.spinner}></div>
-                                        <p>{processingStage || 'Processing...'}</p>
-                                    </div>
-                                )}
-                                {analysisResult && (
-                                    <div className={styles.badge}>
-                                        {analysisResult.message}
-                                        {wallBoundaryCanvas?.coverage && (
-                                            <span style={{ marginLeft: '0.5rem', opacity: 0.8 }}>
-                                                • {wallBoundaryCanvas.coverage}% coverage
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
+      const dataUrl = exportCanvas.toDataURL(format === 'jpg' ? 'image/jpeg' : 'image/png', 0.95);
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `VANNAM-Render-${Date.now()}.${format}`;
+      a.click();
 
-                    <div className={styles.sidebar}>
-                        <div className={styles.sidebarContent}>
-                            <h3 style={{ marginTop: '0' }}>All Shades</h3>
+      try {
+        confetti({
+          particleCount: 45,
+          spread: 75,
+          origin: { y: 0.8 },
+          colors: ['#2563EB', '#22D3EE', '#38BDF8']
+        });
+      } catch (_) {}
+    } catch (err) {
+      console.error('Export render failed', err);
+    }
+  };
 
-                            <h3 style={{ fontSize: '0.8rem', marginTop: '1rem', marginBottom: '1rem' }}>
-                                Select Brand
-                            </h3>
-                            <select
-                                value={selectedBrand}
-                                onChange={(e) => setSelectedBrand(e.target.value)}
-                                className={styles.brandSelect}
-                            >
-                                <option value="all">All Brands</option>
-                                {availableBrands.map(brand => (
-                                    <option key={brand} value={brand}>{brand}</option>
-                                ))}
-                            </select>
+  // Save Project to compact .vannam JSON (with RLE mask compression)
+  const handleSaveProject = () => {
+    try {
+      const currentSurfaces = surfaceStoreRef.current.getSurfaces();
+      const projectData = {
+        app: 'VANNAM',
+        version: '2.5',
+        timestamp: new Date().toISOString(),
+        activePresetId,
+        activeImageSrc,
+        activeLighting,
+        activeFinish,
+        activeSurfaceId,
+        surfaces: currentSurfaces.map((s) => ({
+          id: s.id,
+          name: s.name,
+          type: s.type,
+          color: s.color,
+          finish: s.finish,
+          strength: s.strength,
+          lightingPreservation: s.lightingPreservation,
+          textureRetention: s.textureRetention,
+          coverage: s.coverage,
+          confidence: s.confidence,
+          mask: s.mask ? encodeMaskRLE(s.mask) : null
+        }))
+      };
 
-                            <div className={styles.colorGridWrapper}>
-                                <div className={styles.colorGrid}>
-                                    {filteredColors.map((color, index) => {
-                                        const isActive = selectedColor?.code === color.code;
-                                        return (
-                                            <button
-                                                type="button"
-                                                key={`${color.code}-${color.brand}-${index}`}
-                                                className={`${styles.colorItem} ${isActive ? styles.activeColor : ''}`}
-                                                onClick={() => setSelectedColor(color)}
-                                            >
-                                                <div
-                                                    className={styles.colorChip}
-                                                    style={{ backgroundColor: color.hex }}
-                                                    title={`${color.name} • ${color.code}`}
-                                                />
-                                                <div className={styles.colorMeta}>
-                                                    <span className={styles.colorCode}>{color.code}</span>
-                                                    <span className={styles.colorName}>{color.name}</span>
-                                                    <span className={styles.colorBrand}>{color.brand}</span>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+      const blob = new Blob([JSON.stringify(projectData)], {
+        type: 'application/json'
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `VANNAM-Project-${Date.now()}.vannam`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Save project failed', err);
+    }
+  };
 
-                            <button className={styles.resetBtn} onClick={handleReset}>
-                                <RefreshCw size={16} /> Reset
-                            </button>
-                        </div>
-                    </div>
-                </div>
+  // Trigger Open Project File Dialog
+  const handleOpenProject = () => {
+    if (projectFileInputRef.current) {
+      projectFileInputRef.current.click();
+    }
+  };
+
+  // Load and Restore Project File (with validation & RLE/legacy decompression)
+  const handleLoadProjectFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target.result);
+        const validation = validateVannamProject(parsed);
+        if (!validation.valid) {
+          alert(`Invalid project file: ${validation.error}`);
+          return;
+        }
+
+        const restoredSurfaces = parsed.surfaces.map((s) => ({
+          ...s,
+          mask: decodeMaskRLE(s.mask)
+        }));
+
+        surfaceStoreRef.current.setSurfaces(restoredSurfaces);
+        setSurfaces([...surfaceStoreRef.current.getSurfaces()]);
+
+        if (parsed.activeSurfaceId) setActiveSurfaceId(parsed.activeSurfaceId);
+        if (parsed.activeLighting) setActiveLighting(parsed.activeLighting);
+        if (parsed.activeFinish) setActiveFinish(parsed.activeFinish);
+        if (parsed.activeImageSrc && parsed.activeImageSrc !== activeImageSrc) {
+          setActiveImageSrc(parsed.activeImageSrc);
+        }
+
+        triggerCanvasRedraw();
+
+        try {
+          confetti({
+            particleCount: 50,
+            spread: 80,
+            origin: { y: 0.8 },
+            colors: ['#22D3EE', '#2563EB', '#10B981']
+          });
+        } catch (_) {}
+      } catch (err) {
+        console.error('Failed to parse project file', err);
+        alert('Could not parse project file.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  // Mask Refinement Action
+  const handleApplyMaskRefinement = (options) => {
+    if (!engineRef.current || !activeSurfaceId) return;
+    const activeSurface = surfaces.find((s) => s.id === activeSurfaceId);
+    if (!activeSurface || !activeSurface.mask) return;
+
+    const refined = engineRef.current.refineSurfaceMask(activeSurface, options);
+    const newConf = engineRef.current.computeSurfaceConfidence(activeSurface);
+
+    surfaceStoreRef.current.updateSurface(activeSurfaceId, {
+      mask: refined,
+      confidence: newConf
+    });
+    setSurfaces([...surfaceStoreRef.current.getSurfaces()]);
+    triggerCanvasRedraw();
+  };
+
+  // Undo / Redo
+  const handleUndo = () => {
+    surfaceStoreRef.current.undo();
+    setSurfaces([...surfaceStoreRef.current.getSurfaces()]);
+    triggerCanvasRedraw();
+  };
+
+  const handleRedo = () => {
+    surfaceStoreRef.current.redo();
+    setSurfaces([...surfaceStoreRef.current.getSurfaces()]);
+    triggerCanvasRedraw();
+  };
+
+  // Add Surface Mode
+  const handleStartAddSurface = () => {
+    setIsAddingSurface(true);
+    setActiveTool('wand');
+  };
+
+  const handleDeleteSurface = (surfaceId, e) => {
+    e.stopPropagation();
+    surfaceStoreRef.current.deleteSurface(surfaceId);
+    const updated = surfaceStoreRef.current.getSurfaces();
+    setSurfaces([...updated]);
+    if (activeSurfaceId === surfaceId && updated.length > 0) {
+      setActiveSurfaceId(updated[0].id);
+    }
+    triggerCanvasRedraw();
+  };
+
+  // Dropzone & File Upload Handlers
+  const onDrop = useCallback((acceptedFiles) => {
+    if (acceptedFiles && acceptedFiles.length > 0) {
+      const file = acceptedFiles[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setActiveImageSrc(e.target.result);
+        setActivePresetId('custom-upload');
+      };
+      reader.readAsDataURL(file);
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
+    noClick: true
+  });
+
+  const handleManualUpload = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setActiveImageSrc(ev.target.result);
+        setActivePresetId('custom-upload');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Direct Slider Drag Math with magnetic snapping
+  const updateSplitFromClientX = useCallback(
+    (clientX) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      let newPos = (clientX - rect.left) / rect.width;
+      // Magnetic snap to center
+      if (Math.abs(newPos - 0.5) < 0.02) newPos = 0.5;
+      newPos = Math.max(0.01, Math.min(0.99, newPos));
+      setSplitPos(newPos);
+      triggerCanvasRedraw();
+    },
+    [triggerCanvasRedraw]
+  );
+
+  const handleSplitPointerDown = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isDraggingHandleRef.current = true;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (_) {}
+  };
+
+  const handleSplitPointerMove = (e) => {
+    if (isDraggingHandleRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      updateSplitFromClientX(e.clientX);
+    }
+  };
+
+  const handleSplitPointerUp = (e) => {
+    isDraggingHandleRef.current = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (_) {}
+  };
+
+  // Canvas Drawing Interactions & Magic Wand Multi-Surface
+  const handlePointerDown = (e) => {
+    if (!engineRef.current || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+
+    const relX = (clientX - rect.left) / rect.width;
+    if (Math.abs(relX - splitPos) < 0.04) {
+      isDraggingSplitRef.current = true;
+      canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+
+    if (activeSurfaceId && lockedSurfaces.has(activeSurfaceId)) {
+      return; // Locked surface prevents modifying
+    }
+
+    canvas.setPointerCapture(e.pointerId);
+    isPointerDownRef.current = true;
+    const { x, y } = engineRef.current.screenToCanvasCoordinates(clientX, clientY, canvas);
+    lastPointerRef.current = { x, y };
+
+    if (activeTool === 'wand' || isAddingSurface) {
+      const floodResult = engineRef.current.floodFillSurface(x, y, {
+        tolerance: wandTolerance,
+        edgeSnap: edgeSnapSetting
+      });
+
+      if (floodResult && floodResult.mask) {
+        if (isAddingSurface) {
+          const newSurface = surfaceStoreRef.current.addSurface({
+            name: `Custom Wall ${surfaces.length + 1}`,
+            mask: floodResult.mask,
+            color: selectedColor.hex,
+            finish: activeFinish,
+            confidence: floodResult.confidence
+          });
+          setSurfaces([...surfaceStoreRef.current.getSurfaces()]);
+          setActiveSurfaceId(newSurface.id);
+          setIsAddingSurface(false);
+        } else if (activeSurfaceId) {
+          surfaceStoreRef.current.updateSurface(activeSurfaceId, {
+            mask: floodResult.mask,
+            confidence: floodResult.confidence
+          });
+          setSurfaces([...surfaceStoreRef.current.getSurfaces()]);
+        }
+      }
+      triggerCanvasRedraw();
+    } else if (activeTool === 'smart-brush' || activeTool === 'brush' || activeTool === 'eraser') {
+      const activeSurface = surfaces.find((s) => s.id === activeSurfaceId);
+      if (activeSurface) {
+        const hardness = 1 - brushSoftness / 100;
+        const snap = activeTool === 'smart-brush' ? (edgeSnapSetting === 'OFF' ? 'MEDIUM' : edgeSnapSetting) : (activeTool === 'brush' ? 'OFF' : edgeSnapSetting);
+        engineRef.current.paintSmartBrush(
+          activeSurface,
+          x,
+          y,
+          x,
+          y,
+          {
+            radius: brushSize,
+            hardness,
+            mode: activeTool === 'eraser' ? 'erase' : 'paint',
+            edgeSnap: snap
+          }
+        );
+        surfaceStoreRef.current.updateSurface(activeSurfaceId, { mask: activeSurface.mask });
+        triggerCanvasRedraw();
+      }
+    } else if (activeTool === 'loupe') {
+      // Loupe active, inspection only
+    } else {
+      // Automatic surface activation on click if touching a surface mask
+      const dims = engineRef.current ? engineRef.current.getWorkingDimensions() : { width: canvas.width, height: canvas.height };
+      const clickedSurface = surfaces.find(
+        (s) => s.mask && s.mask[y * dims.width + x] > 20
+      );
+      if (clickedSurface && clickedSurface.id !== activeSurfaceId) {
+        setActiveSurfaceId(clickedSurface.id);
+        triggerCanvasRedraw();
+      }
+    }
+  };
+
+  const handlePointerMove = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+
+    if (isDraggingSplitRef.current) {
+      updateSplitFromClientX(clientX);
+      return;
+    }
+
+    if (
+      clientX >= rect.left &&
+      clientX <= rect.right &&
+      clientY >= rect.top &&
+      clientY <= rect.bottom
+    ) {
+      const relX = clientX - rect.left;
+      const relY = clientY - rect.top;
+
+      setCursorPos({
+        x: relX,
+        y: relY,
+        visible: activeTool === 'smart-brush' || activeTool === 'brush' || activeTool === 'eraser'
+      });
+
+      if (activeTool === 'loupe') {
+        const loupeCanvas = loupeCanvasRef.current;
+        if (loupeCanvas && canvas) {
+          const lCtx = loupeCanvas.getContext('2d');
+          const { x: cX, y: cY } = engineRef.current
+            ? engineRef.current.screenToCanvasCoordinates(clientX, clientY, canvas)
+            : { x: 0, y: 0 };
+          const zoomRadius = 28;
+          lCtx.clearRect(0, 0, 140, 140);
+          lCtx.save();
+          lCtx.beginPath();
+          lCtx.arc(70, 70, 70, 0, Math.PI * 2);
+          lCtx.clip();
+          lCtx.drawImage(
+            canvas,
+            cX - zoomRadius,
+            cY - zoomRadius,
+            zoomRadius * 2,
+            zoomRadius * 2,
+            0,
+            0,
+            140,
+            140
+          );
+          lCtx.restore();
+        }
+        setLoupeState({
+          x: relX,
+          y: relY,
+          visible: true
+        });
+      } else {
+        setLoupeState((prev) => ({ ...prev, visible: false }));
+      }
+    } else {
+      setCursorPos((prev) => ({ ...prev, visible: false }));
+      setLoupeState((prev) => ({ ...prev, visible: false }));
+    }
+
+    if (!isPointerDownRef.current || !engineRef.current) return;
+
+    if (activeTool === 'smart-brush' || activeTool === 'brush' || activeTool === 'eraser') {
+      const { x, y } = engineRef.current.screenToCanvasCoordinates(clientX, clientY, canvas);
+      const activeSurface = surfaces.find((s) => s.id === activeSurfaceId);
+      if (activeSurface) {
+        const hardness = 1 - brushSoftness / 100;
+        const snap = activeTool === 'smart-brush' ? (edgeSnapSetting === 'OFF' ? 'MEDIUM' : edgeSnapSetting) : (activeTool === 'brush' ? 'OFF' : edgeSnapSetting);
+        engineRef.current.paintSmartBrush(
+          activeSurface,
+          lastPointerRef.current.x,
+          lastPointerRef.current.y,
+          x,
+          y,
+          {
+            radius: brushSize,
+            hardness,
+            mode: activeTool === 'eraser' ? 'erase' : 'paint',
+            edgeSnap: snap
+          }
+        );
+        surfaceStoreRef.current.updateSurface(activeSurfaceId, { mask: activeSurface.mask });
+        lastPointerRef.current = { x, y };
+        triggerCanvasRedraw();
+      }
+    }
+  };
+
+  const handlePointerUp = (e) => {
+    isPointerDownRef.current = false;
+    isDraggingSplitRef.current = false;
+    isDraggingHandleRef.current = false;
+    try {
+      canvasRef.current?.releasePointerCapture(e.pointerId);
+    } catch (_) {}
+  };
+
+  // Keyboard Shortcuts (W, B, E, L, Undo, Redo, Enter)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+      if (e.key === 's' || e.key === 'S') {
+        setActiveTool('smart-brush');
+        setIsAddingSurface(false);
+      } else if (e.key === 'w' || e.key === 'W') {
+        setActiveTool('wand');
+        setIsAddingSurface(false);
+      } else if (e.key === 'b' || e.key === 'B') {
+        setActiveTool('brush');
+        setIsAddingSurface(false);
+      } else if (e.key === 'e' || e.key === 'E') {
+        setActiveTool('eraser');
+        setIsAddingSurface(false);
+      } else if (e.key === 'l' || e.key === 'L') {
+        setActiveTool('loupe');
+        setIsAddingSurface(false);
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        handleUndo();
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y')) {
+        e.preventDefault();
+        handleRedo();
+      } else if (isReviewMode) {
+        if (e.key === 'ArrowLeft') {
+          const nextIdx = (reviewSurfaceIndex - 1 + surfaces.length) % surfaces.length;
+          setReviewSurfaceIndex(nextIdx);
+          setActiveSurfaceId(surfaces[nextIdx].id);
+        } else if (e.key === 'ArrowRight') {
+          const nextIdx = (reviewSurfaceIndex + 1) % surfaces.length;
+          setReviewSurfaceIndex(nextIdx);
+          setActiveSurfaceId(surfaces[nextIdx].id);
+        } else if (e.key === 'Enter') {
+          setIsReviewMode(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isReviewMode, reviewSurfaceIndex, surfaces]);
+
+  const activeSurfaceObj =
+    surfaces.find((s) => s.id === activeSurfaceId) ||
+    surfaces[0] || {
+      name: 'Main Wall Plane',
+      color: '#F4EBDD',
+      coverage: 0,
+      confidence: 0.95
+    };
+
+  const activeLrv = calculateLRV(selectedColor.hex);
+
+  return (
+    <div className={styles.studioPage} {...getRootProps()}>
+      <input {...getInputProps()} />
+
+      {/* Blueprint Background Grid */}
+      <div className="blueprint-grid" />
+
+      <div className={`container ${styles.workspaceContainer}`}>
+        {/* =========================================================
+            1. LEFT SIDEBAR: RETOUCH & MULTI-SURFACE CAD STACK (275px)
+            ========================================================= */}
+        <aside className={styles.leftStudio}>
+          <div className={styles.studioHeader}>
+            <div className={styles.studioTagBadge}>
+              <span className={styles.pulseDot} />
+              <span>SURFACE CAD LAB</span>
             </div>
-        </div>
-    );
+            <span className={styles.resolutionTag}>4K • 16:9 RAW</span>
+          </div>
+
+          {/* 1. Architectural Viewport Ingestor */}
+          <ViewportIngestor
+            samplePresets={samplePresets}
+            activePresetId={activePresetId}
+            onSelectPreset={(preset) => {
+              setActivePresetId(preset.id);
+              setActiveImageSrc(preset.src);
+            }}
+            onUploadClick={() => fileInputRef.current?.click()}
+            fileInputRef={fileInputRef}
+            onManualUpload={handleManualUpload}
+          />
+
+          {/* 2. CAD Planar Surface Matrix */}
+          <CadLayerMatrix
+            surfaces={surfaces}
+            activeSurfaceId={activeSurfaceId}
+            hiddenSurfaces={hiddenSurfaces}
+            lockedSurfaces={lockedSurfaces}
+            isAddingSurface={isAddingSurface}
+            onSelectSurface={(surface) => {
+              setActiveSurfaceId(surface.id);
+              if (surface.color) {
+                setCustomHexInput(surface.color);
+                const rgb = hexToRgb(surface.color);
+                setCustomR(rgb.r);
+                setCustomG(rgb.g);
+                setCustomB(rgb.b);
+                setSelectedColor({
+                  code: `SRF-${surface.id}`,
+                  name: surface.name,
+                  brand: 'Surface Layer',
+                  hex: surface.color,
+                  finish: surface.finish
+                });
+              }
+            }}
+            onAutoDetect={handleAutoDetectSurfaces}
+            onToggleVisibility={handleToggleVisibility}
+            onToggleLock={handleToggleLock}
+            onDeleteSurface={handleDeleteSurface}
+            onStartAddSurface={handleStartAddSurface}
+            isProcessing={isProcessing}
+          />
+
+          {/* 3. Machined Floating Instrument Dock */}
+          <InstrumentDock
+            activeTool={activeTool}
+            isAddingSurface={isAddingSurface}
+            showMask={showMask}
+            debugMode={debugMode}
+            isReviewMode={isReviewMode}
+            onSelectTool={(tool) => {
+              setActiveTool(tool);
+              setIsAddingSurface(false);
+            }}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            onToggleMask={() => setShowMask((prev) => !prev)}
+            onToggleDebug={() => setDebugMode((prev) => !prev)}
+            onToggleReview={() => setIsReviewMode((prev) => !prev)}
+            onRefineMask={() => setIsRefineModalOpen(true)}
+          />
+
+          {/* 4. Vernier Calipers & LiDAR Edge Snap */}
+          <VernierCalipers
+            brushSize={brushSize}
+            brushSoftness={brushSoftness}
+            edgeSnapSetting={edgeSnapSetting}
+            onBrushSizeChange={setBrushSize}
+            onBrushSoftnessChange={setBrushSoftness}
+            onEdgeSnapChange={setEdgeSnapSetting}
+          />
+        </aside>
+
+        {/* =========================================================
+            2. CENTER CANVAS & HELIOSTAT VIEWPORT
+            ========================================================= */}
+        <main className={styles.centerCanvasArea}>
+          {/* Heliostat Solar Bar */}
+          <HeliostatBar
+            activeLighting={activeLighting}
+            onSelectLighting={setActiveLighting}
+            isRoverSimulating={isRoverSimulating}
+            onToggleRoverSimulation={() => setIsRoverSimulating((prev) => !prev)}
+          />
+
+          {/* Main Canvas Card Viewport */}
+          <div
+            ref={canvasCardRef}
+            className={`${styles.canvasCard} ${isDragActive ? styles.dragActiveCard : ''}`}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+          >
+            <canvas ref={canvasRef} className={styles.mainCanvas} />
+
+            {/* Active Surface Floating Badge */}
+            <div className={styles.activeSurfaceFloatingBadge}>
+              <span
+                className={styles.floatingSurfaceDot}
+                style={{ backgroundColor: activeSurfaceObj.color }}
+              />
+              <span className={styles.activeFloatingLabel}>
+                ACTIVE PLANE: <strong>{activeSurfaceObj.name.toUpperCase()}</strong>{' '}
+                <span className={styles.confPill}>
+                  ({Math.round((activeSurfaceObj.confidence || 0.95) * 100)}% CONF)
+                </span>
+              </span>
+            </div>
+
+            {/* SpaceX / Polestar Avionics Telemetry HUD Overlay */}
+            <RoverTelemetryHud
+              isRoverSimulating={isRoverSimulating}
+              roverTelemetry={roverTelemetry}
+            />
+
+            {/* Filmstrip Review Mode Step-Through Bar */}
+            {isReviewMode && (
+              <div className={styles.reviewModeBar}>
+                <span>
+                  SURFACE REVIEW: <strong>{activeSurfaceObj.name}</strong> (
+                  {reviewSurfaceIndex + 1}/{surfaces.length})
+                </span>
+                <div className={styles.reviewActions}>
+                  <button
+                    type="button"
+                    className={styles.reviewBtn}
+                    onClick={() => {
+                      const nextIdx =
+                        (reviewSurfaceIndex - 1 + surfaces.length) % surfaces.length;
+                      setReviewSurfaceIndex(nextIdx);
+                      setActiveSurfaceId(surfaces[nextIdx].id);
+                    }}
+                  >
+                    ◀ Prev (←)
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.reviewBtn}
+                    onClick={() => {
+                      const nextIdx = (reviewSurfaceIndex + 1) % surfaces.length;
+                      setReviewSurfaceIndex(nextIdx);
+                      setActiveSurfaceId(surfaces[nextIdx].id);
+                    }}
+                  >
+                    Next ▶ (→)
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.reviewBtn} ${styles.reviewBtnAccept}`}
+                    onClick={() => setIsReviewMode(false)}
+                  >
+                    Accept (Enter)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Canvas HUD Bottom Right Telemetry */}
+            <div className={styles.canvasHudData}>
+              <p>SURFACE: <strong>{activeSurfaceObj.name.toUpperCase()}</strong></p>
+              <p>CODE: <strong>{selectedColor.code}</strong></p>
+              <p>FINISH: <strong>{getFinishPreset(activeSurfaceObj.finish || activeFinish).name.toUpperCase()}</strong></p>
+              <p>TEMP: <strong>{getLightingPreset(activeLighting).kelvin}</strong></p>
+            </div>
+
+            {/* Knurled Optical Comparison Split Shutter */}
+            <ComparisonSplitShutter
+              splitPos={splitPos}
+              onPointerDown={handleSplitPointerDown}
+              onPointerMove={handleSplitPointerMove}
+              onPointerUp={handleSplitPointerUp}
+            />
+
+            {/* Processing Loading Spinner Overlay */}
+            {isProcessing && (
+              <div className={styles.processingOverlay}>
+                <VannamSciFiLoader
+                  scale={0.7}
+                  message={processingMsg || 'Segmenting architectural surfaces...'}
+                  telemetry="LiDAR OPTICS • PLANAR DEPTH CALIBRATION"
+                />
+              </div>
+            )}
+
+            {/* Live Custom Brush Pointer Indicator */}
+            {cursorPos.visible && (
+              <div
+                className={styles.brushCursor}
+                style={{
+                  left: `${cursorPos.x}px`,
+                  top: `${cursorPos.y}px`,
+                  width: `${brushSize * 2}px`,
+                  height: `${brushSize * 2}px`,
+                  borderColor: activeTool === 'eraser' ? '#ef4444' : 'var(--primary)'
+                }}
+              />
+            )}
+
+            {/* Leica 2.5x Optical Micro-Loupe Lens */}
+            <LeicaLoupe
+              loupeCanvasRef={loupeCanvasRef}
+              loupeState={loupeState}
+            />
+          </div>
+
+          {/* Bottom Continuous Range Scrub Bar */}
+          <div className={styles.comparisonBar}>
+            <span className={styles.compBarLabel}>Original Architecture</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={Math.round(splitPos * 100)}
+              onChange={(e) => {
+                const val = Math.max(
+                  0.01,
+                  Math.min(0.99, parseInt(e.target.value, 10) / 100)
+                );
+                setSplitPos(val);
+                triggerCanvasRedraw();
+              }}
+              className={styles.comparisonRangeInput}
+            />
+            <span className={styles.compBarLabelActive}>
+              Coated Surface ({selectedColor.name})
+            </span>
+          </div>
+        </main>
+
+        {/* =========================================================
+            3. RIGHT SIDEBAR: COLOR & MATERIAL SCIENCE (360px)
+            ========================================================= */}
+        <aside className={styles.rightStudio}>
+          <div className={styles.studioHeader}>
+            <span className={styles.studioTag}>COLOR & MATERIAL LAB</span>
+            <span className={styles.deltaETag}>ΔE &lt; 0.3</span>
+          </div>
+
+          {/* 1. Physical Swatch Specimen Plate */}
+          <PhysicalSwatchPlate
+            selectedColor={selectedColor}
+            activeLrv={activeLrv}
+            copiedHex={copiedHex}
+            onCopyHex={handleCopyHex}
+            onOpenColorPicker={() => nativeColorPickerRef.current?.click()}
+            nativeColorPickerRef={nativeColorPickerRef}
+            onNativePickerChange={handleNativePickerChange}
+          />
+
+          {/* 2. 3D Tactile Material Finish Tiles */}
+          <MaterialFinishTiles
+            activeFinish={activeFinish}
+            onSelectFinish={handleFinishSelect}
+          />
+
+          {/* 3. Architectural Pigment Synthesizer */}
+          <PigmentSynthesizer
+            colorInputMode={colorInputMode}
+            customHexInput={customHexInput}
+            customR={customR}
+            customG={customG}
+            customB={customB}
+            onColorInputModeChange={setColorInputMode}
+            onHexInputChange={handleHexInputChange}
+            onRgbChange={handleRgbChange}
+            onOpenNativePicker={() => nativeColorPickerRef.current?.click()}
+          />
+
+          {/* 4. Golden Ratio 60-30-10 Spatial Balance Deck */}
+          <GoldenRatioHarmonizer
+            harmonizerPalette={harmonizerPalette}
+            activeFinish={activeFinish}
+            onSelectColor={handleColorSelect}
+            onApplyHarmonizerToSurfaces={handleApplyHarmonizerToSurfaces}
+          />
+
+          {/* 5. 1-Click Executive Spec Sheet & Project Exporter */}
+          <SpecSheetExporter
+            onExportSpecSheet={handleExportSpecSheet}
+            onExportRender={handleExportRender}
+            onSaveProject={handleSaveProject}
+            onOpenProject={handleOpenProject}
+          />
+
+          {/* 6. Curated Architectural Fan-Deck Swatch Matrix */}
+          <FanDeckMatrix
+            brands={BRANDS}
+            selectedBrand={selectedBrand}
+            filteredSwatches={filteredSwatches}
+            selectedColor={selectedColor}
+            onSelectBrand={setSelectedBrand}
+            onSelectColor={handleColorSelect}
+          />
+        </aside>
+      </div>
+
+      {/* Hidden File Input for .vannam Project Ingestion */}
+      <input
+        ref={projectFileInputRef}
+        type="file"
+        accept=".vannam,.json"
+        style={{ display: 'none' }}
+        onChange={handleLoadProjectFile}
+      />
+
+      {/* Mask Refinement Modal */}
+      <MaskRefinementModal
+        isOpen={isRefineModalOpen}
+        surfaceName={activeSurfaceObj.name}
+        onClose={() => setIsRefineModalOpen(false)}
+        onApply={handleApplyMaskRefinement}
+      />
+    </div>
+  );
 };
 
 export default Visualizer;

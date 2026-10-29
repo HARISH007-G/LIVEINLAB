@@ -1,180 +1,542 @@
-.navbar {
-    background: var(--glass);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--glass-border);
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    padding: 1rem 0;
-    transition: background 0.3s ease, border-color 0.3s ease;
+/* ==========================================================
+   VANNAM ARCHITECTURAL NAVIGATION BAR
+   1. Standard Floating Pill (Marketing Pages)
+   2. Sleek Studio Pro App Top Bar (Visualizer Studio)
+   ========================================================== */
+
+/* =========================================================
+   1. STANDARD FLOATING PILL NAVBAR
+   ========================================================= */
+.headerWrapper {
+  position: fixed;
+  top: 1.25rem;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 0 1.5rem;
+  pointer-events: none;
 }
 
-.navContainer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.navBar {
+  max-width: 1440px;
+  margin: 0 auto;
+  height: 64px;
+  background: var(--glass-bg, rgba(255, 255, 255, 0.85));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.08));
+  border-radius: 9999px;
+  padding: 0 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-md, 0 4px 20px rgba(15, 23, 42, 0.06));
+  pointer-events: auto;
+  transition: all 0.3s ease;
 }
 
-.logo {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-main);
-    text-decoration: none;
+[data-theme='dark'] .navBar {
+  background: rgba(13, 19, 34, 0.82);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
-.logoIcon {
-    color: var(--accent);
-    width: 28px;
-    height: 28px;
+.logoWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
 }
 
-/* Multicolor Text Animation */
-.logoText {
-    background: linear-gradient(to right, #2563eb, #22d3ee, #a855f7, #ef4444);
-    background-size: 300%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: rainbow 5s ease infinite alternate;
+.brandLogoImg {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
 }
 
-@keyframes rainbow {
-    0% {
-        background-position: 0% 50%;
-    }
+.titleContainer {
+  display: flex;
+  flex-direction: column;
+}
 
-    50% {
-        background-position: 100% 50%;
-    }
+.brandTitle {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--on-surface, #0f172a);
+  line-height: 1.1;
+}
 
-    100% {
-        background-position: 0% 50%;
-    }
+[data-theme='dark'] .brandTitle {
+  color: #f8fafc;
+}
+
+.brandSubtitle {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.52rem;
+  color: var(--tech-cyan, #0ea5e9);
+  letter-spacing: 0.14em;
+  font-weight: 700;
+}
+
+[data-theme='dark'] .brandSubtitle {
+  color: var(--tech-cyan, #22d3ee);
 }
 
 .navLinks {
-    display: flex;
-    align-items: center;
-    gap: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
 }
 
-.navLinks a {
-    color: var(--text-muted);
-    font-weight: 500;
-    transition: var(--transition);
-    position: relative;
+@media (max-width: 990px) {
+  .navLinks {
+    display: none;
+  }
 }
 
-.navLinks a:hover {
-    color: var(--text-main);
+.navLink {
+  font-size: 0.88rem;
+  color: var(--on-surface-variant, #64748b);
+  font-weight: 500;
+  transition: color 0.2s ease;
+  position: relative;
+  padding: 0.25rem 0;
+  text-decoration: none;
 }
 
-.activeLink {
-    color: var(--accent) !important;
+.navLink:hover {
+  color: var(--on-surface, #0f172a);
 }
 
-.activeLink::after {
-    content: '';
-    position: absolute;
-    bottom: -4px;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: var(--accent);
-    box-shadow: 0 0 8px var(--accent);
+[data-theme='dark'] .navLink:hover {
+  color: #f8fafc;
 }
 
-.actions {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+.navLinkActive {
+  color: var(--primary, #2563eb) !important;
+  font-weight: 700 !important;
 }
 
-.themeBtn {
-    background: transparent;
-    color: var(--text-muted);
-    padding: 0.5rem;
-    border-radius: 50%;
-    border: 1px solid var(--glass-border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--transition);
+[data-theme='dark'] .navLinkActive {
+  color: var(--tech-cyan, #22d3ee) !important;
 }
 
-.themeBtn:hover {
-    background: var(--glass-border);
-    color: var(--text-main);
+.navLinkActive::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
 }
 
-.langSelectWrapper {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: 2rem;
-    border: 1px solid var(--glass-border);
-    transition: background 0.3s ease;
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
 }
 
-.langIcon {
-    color: var(--text-muted);
+.localeGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--surface-container-low, #f8fafc);
+  border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.08));
+  border-radius: 9999px;
+}
+
+[data-theme='dark'] .localeGroup {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .langSelect {
-    background: transparent;
-    border: none;
-    color: var(--text-main);
-    font-family: inherit;
-    font-size: 0.9rem;
-    outline: none;
-    cursor: pointer;
+  background: transparent;
+  border: none;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--on-surface, #0f172a);
+  outline: none;
+  cursor: pointer;
+}
+
+[data-theme='dark'] .langSelect {
+  color: #f8fafc;
 }
 
 .langSelect option {
-    background: var(--bg-secondary);
-    color: var(--text-main);
+  background: var(--surface, #ffffff);
+  color: var(--on-surface, #0f172a);
 }
 
-.menuBtn {
+[data-theme='dark'] .langSelect option {
+  background: #111827;
+  color: #f8fafc;
+}
+
+.themeToggleBtn {
+  background: transparent;
+  border: none;
+  color: var(--on-surface-variant, #64748b);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.themeToggleBtn:hover {
+  color: var(--primary, #2563eb);
+  transform: rotate(15deg);
+}
+
+[data-theme='dark'] .themeToggleBtn:hover {
+  color: var(--tech-cyan, #22d3ee);
+}
+
+.themeIconSun {
+  color: #f59e0b;
+}
+
+.themeIconMoon {
+  color: var(--on-surface-variant, #64748b);
+}
+
+.launchBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.25rem;
+  background: var(--primary, #2563eb);
+  color: #ffffff;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+  transition: all 0.2s ease;
+}
+
+.launchBtn:hover {
+  background: var(--primary-hover, #1d4ed8);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
+}
+
+[data-theme='dark'] .launchBtn {
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+}
+
+/* =========================================================
+   2. STUDIO PRO APP TOP BAR (When inside /visualizer)
+   ========================================================= */
+.studioHeaderWrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--surface, #ffffff);
+  border-bottom: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.08));
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme='dark'] .studioHeaderWrapper {
+  background: rgba(11, 18, 32, 0.95);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+.studioNavBar {
+  max-width: 100%;
+  padding: 0 20px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.studioLeftGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.studioLogoWrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.studioLogoImg {
+  height: 20px;
+  width: auto;
+}
+
+.studioBrandTitle {
+  font-family: var(--font-main, sans-serif);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--on-surface, #0f172a);
+}
+
+[data-theme='dark'] .studioBrandTitle {
+  color: #f8fafc;
+}
+
+.studioDivider {
+  color: var(--outline, #cbd5e1);
+  font-size: 14px;
+}
+
+[data-theme='dark'] .studioDivider {
+  color: rgba(255, 255, 255, 0.15);
+}
+
+.studioBreadcrumbBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: var(--surface-container-low, #f8fafc);
+  border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.08));
+  border-radius: 4px;
+}
+
+[data-theme='dark'] .studioBreadcrumbBadge {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.studioLiveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+.studioBadgeText {
+  font-family: var(--font-mono, monospace);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--on-surface, #0f172a);
+}
+
+[data-theme='dark'] .studioBadgeText {
+  color: #f8fafc;
+}
+
+.studioVerTag {
+  font-family: var(--font-mono, monospace);
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--primary, #2563eb);
+  background: var(--primary-container, #dbeafe);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+[data-theme='dark'] .studioVerTag {
+  color: var(--tech-cyan, #22d3ee);
+  background: rgba(37, 99, 235, 0.25);
+}
+
+/* Studio Nav Links */
+.studioNavLinks {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+@media (max-width: 860px) {
+  .studioNavLinks {
     display: none;
-    background: transparent;
-    color: var(--text-main);
+  }
 }
 
-@media (max-width: 768px) {
-    .menuBtn {
-        display: block;
-    }
+.studioNavLink {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--on-surface-variant, #64748b);
+  text-decoration: none;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
 
-    .navLinks {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        width: 100%;
-        background: var(--bg-secondary);
-        flex-direction: column;
-        padding: 2rem;
-        gap: 1.5rem;
-        transform: translateY(-20px);
-        opacity: 0;
-        visibility: hidden;
-        transition: var(--transition);
-        border-bottom: 1px solid var(--glass-border);
-    }
+.studioNavLink:hover {
+  color: var(--on-surface, #0f172a);
+  background: var(--surface-container-high, #e2e8f0);
+}
 
-    .navLinks.active {
-        transform: translateY(0);
-        opacity: 1;
-        visibility: visible;
-    }
+[data-theme='dark'] .studioNavLink:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.08);
+}
 
-    .actions {
-        flex-direction: column-reverse;
-        /* Put theme toggle below lang on mobile or separate? Let's just stack */
-        gap: 1.5rem;
-    }
+.studioNavLinkActive {
+  color: var(--primary, #2563eb) !important;
+  font-weight: 700 !important;
+  background: var(--primary-container, #dbeafe) !important;
+}
+
+[data-theme='dark'] .studioNavLinkActive {
+  color: var(--tech-cyan, #22d3ee) !important;
+  background: rgba(37, 99, 235, 0.22) !important;
+}
+
+.studioRightGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.studioLangSelect {
+  background: transparent;
+  border: none;
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--on-surface, #0f172a);
+  outline: none;
+  cursor: pointer;
+}
+
+[data-theme='dark'] .studioLangSelect {
+  color: #f8fafc;
+}
+
+.studioThemeToggleBtn {
+  background: transparent;
+  border: none;
+  color: var(--on-surface-variant, #64748b);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+
+.studioThemeToggleBtn:hover {
+  transform: rotate(15deg);
+}
+
+.studioExitBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  background: var(--surface-container-low, #f8fafc);
+  border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.1));
+  border-radius: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--on-surface, #0f172a);
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+[data-theme='dark'] .studioExitBtn {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.studioExitBtn:hover {
+  background: var(--primary, #2563eb);
+  color: #ffffff;
+  border-color: var(--primary, #2563eb);
+}
+
+[data-theme='dark'] .studioExitBtn:hover {
+  background: var(--tech-cyan, #22d3ee);
+  color: #0b1220;
+  border-color: var(--tech-cyan, #22d3ee);
+}
+
+/* Mobile Trigger */
+.mobileTrigger {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--on-surface, #0f172a);
+  cursor: pointer;
+  padding: 4px;
+}
+
+[data-theme='dark'] .mobileTrigger {
+  color: #f8fafc;
+}
+
+@media (max-width: 990px) {
+  .mobileTrigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Mobile Menu Drawer */
+.mobileMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 16px;
+  right: 16px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.08));
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: var(--shadow-lg, 0 12px 40px rgba(0, 0, 0, 0.15));
+  pointer-events: auto;
+}
+
+[data-theme='dark'] .mobileMenu {
+  background: rgba(13, 19, 34, 0.95);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+
+.mobileLink {
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--on-surface, #0f172a);
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+[data-theme='dark'] .mobileLink {
+  color: #f8fafc;
+}
+
+.mobileLink:hover {
+  background: var(--surface-container-high, #e2e8f0);
+  color: var(--primary, #2563eb);
+}
+
+[data-theme='dark'] .mobileLink:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--tech-cyan, #22d3ee);
 }

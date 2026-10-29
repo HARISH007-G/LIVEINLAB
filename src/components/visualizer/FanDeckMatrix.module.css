@@ -1,0 +1,329 @@
+.fanDeckContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface-container-low, #f8fafc);
+  border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.08));
+  border-radius: var(--radius-lg, 12px);
+  padding: 10px;
+}
+
+[data-theme='dark'] .fanDeckContainer {
+  background: rgba(17, 24, 39, 0.7);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.deckHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 2px;
+}
+
+.titleWithIcon {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sparkleIcon {
+  color: var(--primary, #2563eb);
+}
+
+[data-theme='dark'] .sparkleIcon {
+  color: var(--tech-cyan, #22d3ee);
+}
+
+.sectionMiniTag {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--on-surface-variant, #64748b);
+  text-transform: uppercase;
+}
+
+.countBadge {
+  font-family: var(--font-mono, monospace);
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--on-surface-variant, #64748b);
+  background: var(--surface-container-high, #e2e8f0);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+[data-theme='dark'] .countBadge {
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+}
+
+.brandTabsWrapper {
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.brandTabsWrapper::-webkit-scrollbar {
+  height: 3px;
+}
+.brandTabsWrapper::-webkit-scrollbar-thumb {
+  background: var(--outline, #cbd5e1);
+  border-radius: 3px;
+}
+
+.brandTabs {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: max-content;
+}
+
+.brandTabBtn {
+  position: relative;
+  padding: 4px 7px;
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--on-surface-variant, #64748b);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  border-radius: 4px;
+}
+
+[data-theme='dark'] .brandTabBtn {
+  color: #94a3b8;
+}
+
+.brandTabBtn:hover {
+  color: var(--on-surface, #0f172a);
+  background: var(--surface-container-high, #e2e8f0);
+}
+
+[data-theme='dark'] .brandTabBtn:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.brandActive {
+  color: var(--primary, #2563eb) !important;
+  font-weight: 700;
+}
+
+[data-theme='dark'] .brandActive {
+  color: var(--tech-cyan, #22d3ee) !important;
+}
+
+.activeUnderline {
+  position: absolute;
+  bottom: 0;
+  left: 6px;
+  right: 6px;
+  height: 2px;
+  background: var(--primary, #2563eb);
+  border-radius: 1px;
+}
+
+[data-theme='dark'] .activeUnderline {
+  background: var(--tech-cyan, #22d3ee);
+  box-shadow: 0 0 6px var(--tech-cyan, #22d3ee);
+}
+
+/* Filter Row: Search & Tones */
+.filterRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.12));
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+[data-theme='dark'] .searchBox {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.searchIcon {
+  color: var(--on-surface-variant, #64748b);
+  flex-shrink: 0;
+}
+
+.searchInput {
+  width: 100%;
+  background: none;
+  border: none;
+  font-family: var(--font-main, sans-serif);
+  font-size: 10px;
+  color: var(--on-surface, #0f172a);
+  outline: none;
+}
+
+[data-theme='dark'] .searchInput {
+  color: #f8fafc;
+}
+
+.tonePills {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.tonePills::-webkit-scrollbar {
+  display: none;
+}
+
+.tonePill {
+  font-family: var(--font-mono, monospace);
+  font-size: 8px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.08));
+  color: var(--on-surface-variant, #64748b);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+[data-theme='dark'] .tonePill {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+}
+
+.tonePill:hover {
+  color: var(--on-surface, #0f172a);
+}
+
+[data-theme='dark'] .tonePill:hover {
+  color: #f8fafc;
+}
+
+.tonePillActive {
+  background: var(--primary, #2563eb) !important;
+  border-color: var(--primary, #2563eb) !important;
+  color: #ffffff !important;
+  font-weight: 700;
+}
+
+[data-theme='dark'] .tonePillActive {
+  background: var(--tech-cyan, #22d3ee) !important;
+  border-color: var(--tech-cyan, #22d3ee) !important;
+  color: #0b1220 !important;
+}
+
+/* Swatch Grid */
+.swatchGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.swatchGrid::-webkit-scrollbar {
+  width: 4px;
+}
+.swatchGrid::-webkit-scrollbar-thumb {
+  background: var(--outline, #cbd5e1);
+  border-radius: 4px;
+}
+
+.swatchBtn {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.swatchBtn:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  z-index: 5;
+}
+
+.swatchBtnSelected {
+  border-color: #ffffff !important;
+  box-shadow: 0 0 0 2px var(--primary, #2563eb), 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+}
+
+[data-theme='dark'] .swatchBtnSelected {
+  box-shadow: 0 0 0 2px var(--tech-cyan, #22d3ee), 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+.swatchSpecularGleam {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.45), transparent);
+  pointer-events: none;
+}
+
+.hoverMetaPill {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  right: 2px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  border-radius: 2px;
+  padding: 1px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.swatchBtn:hover .hoverMetaPill {
+  opacity: 1;
+}
+
+.hoverCode {
+  font-family: var(--font-mono, monospace);
+  font-size: 6.5px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.checkWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 2;
+}
+
+.swatchCheck {
+  color: #ffffff;
+}

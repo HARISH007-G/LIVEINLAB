@@ -1,0 +1,93 @@
+/* ==========================================================
+   VANNAM PARTNER MARQUEE — ARCHITECTURAL STUDIO
+   ========================================================== */
+
+.marqueeSection {
+  padding: 3rem 0 1.5rem;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-dark);
+}
+
+.marqueeHeader {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.marqueeTag {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--on-surface-variant);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.marqueeTrackWrapper {
+  display: flex;
+  overflow: hidden;
+  user-select: none;
+  position: relative;
+  mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+}
+
+.marqueeTrack {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  width: max-content;
+  animation: scrollMarquee 32s linear infinite;
+}
+
+.marqueeTrack:hover {
+  animation-play-state: paused;
+}
+
+@keyframes scrollMarquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.partnerCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.partnerCard:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+}
+
+.partnerDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.partnerName {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+
+.partnerType {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--on-surface-variant);
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--border-subtle);
+}

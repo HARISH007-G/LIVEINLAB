@@ -1,0 +1,391 @@
+/* ==========================================================
+   VANNAM ARCHITECTURAL BENTO GRID
+   ========================================================== */
+
+.bentoSection {
+  padding: 6rem 0;
+  position: relative;
+  background: var(--bg-dark);
+}
+
+.sectionHeader {
+  max-width: 800px;
+  margin-bottom: 3.5rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.35rem 0.95rem;
+  border-radius: 9999px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--primary);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 8px var(--primary);
+}
+
+.sectionTitle {
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-weight: 800;
+  color: var(--on-surface);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  margin-bottom: 1.25rem;
+}
+
+.sectionTitle span {
+  color: var(--primary);
+}
+
+.sectionLead {
+  font-size: 1.05rem;
+  color: var(--on-surface-variant);
+  line-height: 1.65;
+}
+
+/* 4-Tile Grid */
+.bentoGrid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 960px) {
+  .bentoGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bentoCard {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1.25rem;
+  padding: 2.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.bentoCard:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+/* Card Metadata */
+.cardContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 10;
+}
+
+.cardTag {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--tech-cyan);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cardTitle {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  letter-spacing: -0.02em;
+}
+
+.cardDesc {
+  font-size: 0.9rem;
+  color: var(--on-surface-variant);
+  line-height: 1.55;
+}
+
+/* Tile 1: LiDAR Scanning Visualizer */
+.radarVisualWrap {
+  height: 200px;
+  background: #0B1220;
+  border-radius: 0.75rem;
+  border: 1px solid var(--tech-panel-border);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radarCircle1 {
+  width: 140px;
+  height: 140px;
+  border: 1px dashed rgba(34, 211, 238, 0.3);
+  border-radius: 50%;
+  position: absolute;
+}
+
+.radarCircle2 {
+  width: 220px;
+  height: 220px;
+  border: 1px solid rgba(34, 211, 238, 0.15);
+  border-radius: 50%;
+  position: absolute;
+}
+
+.radarSweep {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: conic-gradient(from 0deg at 50% 50%, rgba(34, 211, 238, 0.4) 0deg, transparent 60deg, transparent 360deg);
+  border-radius: 50%;
+  animation: rotateSweep 4s linear infinite;
+}
+
+@keyframes rotateSweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.radarTarget1 {
+  position: absolute;
+  top: 35%;
+  left: 65%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tech-cyan);
+  box-shadow: 0 0 10px var(--tech-cyan);
+  animation: pulse 1.5s infinite;
+}
+
+.radarTarget2 {
+  position: absolute;
+  bottom: 25%;
+  left: 30%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--arch-amber);
+  box-shadow: 0 0 8px var(--arch-amber);
+}
+
+.lidarCoordinates {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  display: flex;
+  gap: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: #94A3B8;
+}
+
+/* Tile 2: Gauge Visual */
+.gaugeVisualWrap {
+  background: var(--surface-dim);
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-subtle);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.gaugeNumber {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.gaugeBig {
+  font-family: var(--font-mono);
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  line-height: 1;
+}
+
+.gaugeUnit {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.gaugeBarTrack {
+  width: 100%;
+  height: 8px;
+  background: rgba(15, 23, 42, 0.08);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+[data-theme='dark'] .gaugeBarTrack {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.gaugeBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--tech-cyan), var(--primary));
+  border-radius: 9999px;
+}
+
+.gaugeMetaRow {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--on-surface-variant);
+}
+
+.gaugeGreen {
+  color: var(--success);
+  font-weight: 700;
+}
+
+/* Tile 3: Safety Visual */
+.safetyVisualWrap {
+  background: var(--surface-dim);
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-subtle);
+  padding: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.safetyIconRing {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--success);
+}
+
+.safetyMetric {
+  display: flex;
+  flex-direction: column;
+}
+
+.zeroNumber {
+  font-family: var(--font-mono);
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  line-height: 1;
+}
+
+.safetySub {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--on-surface-variant);
+  letter-spacing: 0.06em;
+}
+
+/* Tile 4: Harmonizer Interactive Visual */
+.harmonizerInteractive {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.colorPalettePreview {
+  height: 120px;
+  display: grid;
+  grid-template-columns: 6fr 4fr;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.swatchLarge {
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  display: flex;
+  align-items: flex-end;
+  transition: background-color 0.3s ease;
+}
+
+.swatchSplit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.swatchSmall1 {
+  flex: 1;
+  background: #E5E7EB;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  display: flex;
+  align-items: flex-end;
+}
+
+[data-theme='dark'] .swatchSmall1 {
+  background: #334155;
+}
+
+.swatchSmall2 {
+  flex: 1;
+  background: #F59E0B;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  display: flex;
+  align-items: flex-end;
+}
+
+.swatchRatio {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.paletteSwitcher {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.paletteDot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.paletteDot:hover {
+  transform: scale(1.15);
+}
+
+.paletteDotActive {
+  border-color: var(--on-surface) !important;
+  transform: scale(1.15);
+}

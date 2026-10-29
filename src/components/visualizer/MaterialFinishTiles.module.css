@@ -1,0 +1,137 @@
+.finishSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.finishHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionMiniTag {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--on-surface-variant, #64748b);
+  text-transform: uppercase;
+}
+
+.subTag {
+  font-family: var(--font-mono, monospace);
+  font-size: 8.5px;
+  font-weight: 600;
+  color: var(--on-surface-variant, #94a3b8);
+}
+
+.finishGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.finishBtn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 10px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.08));
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+}
+
+.finishName {
+  font-family: var(--font-main, sans-serif);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--on-surface, #0f172a);
+  z-index: 1;
+}
+
+[data-theme='dark'] .finishName {
+  color: #f8fafc;
+}
+
+.finishSheen {
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--on-surface-variant, #64748b);
+  margin-top: 2px;
+  z-index: 1;
+}
+
+[data-theme='dark'] .finishSheen {
+  color: #94a3b8;
+}
+
+.finishSheenGloss {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.finishBtn:hover .finishSheenGloss {
+  opacity: 0.8;
+}
+
+/* Individual Finish Micro-Textures */
+.finish_matte {
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+}
+.finish_matte .finishSheenGloss {
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.2), transparent 70%);
+}
+
+.finish_satin {
+  background: linear-gradient(135deg, #f8fafc, #cbd5e1);
+}
+.finish_satin .finishSheenGloss {
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%);
+}
+
+.finish_gloss {
+  background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+}
+.finish_gloss .finishSheenGloss {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, transparent 40%, rgba(255, 255, 255, 0.5) 100%);
+}
+
+.finish_stucco {
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+}
+.finish_stucco .finishSheenGloss {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 0);
+  background-size: 4px 4px;
+}
+
+[data-theme='dark'] .finish_matte {
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+}
+[data-theme='dark'] .finish_satin {
+  background: linear-gradient(135deg, #334155, #1e293b);
+}
+[data-theme='dark'] .finish_gloss {
+  background: linear-gradient(135deg, #475569, #1e293b);
+}
+[data-theme='dark'] .finish_stucco {
+  background: linear-gradient(135deg, #334155, #0f172a);
+}
+
+.finishBtnActive {
+  border-color: var(--primary, #2563eb) !important;
+  box-shadow: 0 0 0 1.5px var(--primary, #2563eb), 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+
+[data-theme='dark'] .finishBtnActive {
+  border-color: var(--tech-cyan, #22d3ee) !important;
+  box-shadow: 0 0 0 1.5px var(--tech-cyan, #22d3ee), 0 0 16px rgba(34, 211, 238, 0.25);
+}

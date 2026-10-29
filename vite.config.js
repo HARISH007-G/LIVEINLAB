@@ -1,11 +1,21 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import fs from 'node:fs';
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+// Fix Node v25+ on Windows sandbox where native realpath throws EPERM
+try {
+  fs.realpathSync.native(process.cwd());
+} catch (err) {
+  if (err && (err.code === 'EPERM' || err.code === 'EISDIR')) {
+    fs.realpathSync.native = fs.realpathSync;
+  }
+}
 
 export default defineConfig({
   // Use environment-aware base URL
   // Development: '/' for localhost
-  // Production: '/vannamwebsite/' for GitHub Pages
-  base: process.env.NODE_ENV === 'production' ? '/vannamwebsite/' : '/',
+  // Production: '/LIVEINLAB/' for GitHub Pages (or custom VITE_BASE_PATH if set)
+  base: process.env.VITE_BASE_PATH || (process.env.NODE_ENV === 'production' ? '/LIVEINLAB/' : '/'),
 
   plugins: [react()],
 
@@ -29,4 +39,4 @@ export default defineConfig({
       }
     }
   }
-})
+});

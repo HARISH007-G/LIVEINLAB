@@ -1,0 +1,329 @@
+/* ==========================================================
+   VANNAM PRODUCTS / GLOBAL SHADE REPOSITORY
+   Architectural Color Library — Swatches as Hero
+   ========================================================== */
+
+.pageContainer {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  padding-top: 5rem;
+  min-height: 100vh;
+}
+
+/* --- HERO SECTION --- */
+.heroSection {
+  position: relative;
+  padding: 4rem 0 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.heroInner {
+  position: relative;
+  z-index: 10;
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.repoBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.4rem 1.15rem;
+  border-radius: 9999px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.75rem;
+}
+
+.pulseDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tech-cyan);
+  box-shadow: 0 0 8px var(--tech-cyan);
+  animation: pulse 2s infinite;
+}
+
+.repoText {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--on-surface-variant);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.heroTitle {
+  font-size: clamp(2.5rem, 5.5vw, 4.5rem);
+  font-weight: 900;
+  color: var(--on-surface);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  margin-bottom: 1.25rem;
+}
+
+.heroTitle span {
+  color: var(--primary);
+}
+
+.heroLead {
+  font-size: 1.12rem;
+  color: var(--on-surface-variant);
+  line-height: 1.65;
+  max-width: 600px;
+  margin-bottom: 3.5rem;
+}
+
+/* 4-Col Stats Row */
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .statsRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.statCard {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.statVal {
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+
+.statLabel {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* --- FILTER BAR --- */
+.filterBarSection {
+  padding: 1.5rem 0;
+  position: sticky;
+  top: 5rem;
+  z-index: 40;
+  background: var(--bg-dark);
+}
+
+.filterBarInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+  padding: 0.75rem 1.25rem;
+  gap: 1rem;
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+}
+
+.filterTabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+}
+
+.filterTabBtn {
+  padding: 0.45rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  background: var(--surface-dim);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.filterTabBtn:hover {
+  color: var(--on-surface);
+  border-color: var(--primary);
+}
+
+.filterTabActive {
+  background: var(--primary) !important;
+  color: #fff !important;
+  border-color: var(--primary) !important;
+}
+
+.searchWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface-dim);
+  border: 1px solid var(--border-subtle);
+  border-radius: 9999px;
+  padding: 0.4rem 1rem;
+  min-width: 240px;
+}
+
+.searchInput {
+  background: transparent;
+  border: none;
+  font-size: 0.85rem;
+  color: var(--on-surface);
+  outline: none;
+  width: 100%;
+}
+
+/* --- PRODUCT SWATCH GRID --- */
+.productsGridSection {
+  padding: 2rem 0 6rem;
+}
+
+.resultsMetaRow {
+  margin-bottom: 1.5rem;
+}
+
+.resultsCount {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--on-surface-variant);
+}
+
+.resultsCount strong {
+  color: var(--primary);
+}
+
+.productsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 1200px) {
+  .productsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .productsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 540px) {
+  .productsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.productCard {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.productCard:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.swatchHeroArea {
+  height: 200px;
+  width: 100%;
+  position: relative;
+}
+
+.finishPill {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cardBody {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cardTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  line-height: 1.2;
+}
+
+.cardMetaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--on-surface-variant);
+}
+
+.cardHex {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.testStudioBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--surface-dim);
+  border: 1px solid var(--border-subtle);
+  color: var(--primary);
+  padding: 0.6rem;
+  border-radius: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+  margin-top: 0.25rem;
+}
+
+.testStudioBtn:hover {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
